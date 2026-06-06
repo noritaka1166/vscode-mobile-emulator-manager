@@ -45,6 +45,10 @@
         "command": "emulators.stop",
         "title": "Stop",
         "icon": "$(stop)"
+      },
+      {
+        "command": "emulators.copyId",
+        "title": "Copy UDID"
       }
     ],
     "menus": {
@@ -58,13 +62,17 @@
       "view/item/context": [
         {
           "command": "emulators.start",
-          "when": "view == emulatorsView && viewItem == emulator-stopped",
+          "when": "view == emulatorsView && viewItem =~ /stopped$/",
           "group": "inline"
         },
         {
           "command": "emulators.stop",
-          "when": "view == emulatorsView && viewItem == emulator-running",
+          "when": "view == emulatorsView && viewItem =~ /running$/",
           "group": "inline"
+        },
+        {
+          "command": "emulators.copyId",
+          "when": "view == emulatorsView && viewItem =~ /^emulator-ios-/"
         }
       ]
     }

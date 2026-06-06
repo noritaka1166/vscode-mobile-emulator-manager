@@ -1,16 +1,40 @@
 import { exec } from 'child_process';
 import * as os from 'os';
 import * as path from 'path';
+import * as fs from 'fs';
 
 export interface Emulator {
     id: string; // uuid for iOS, name for Android
     name: string;
     os: 'iOS' | 'Android';
+    osVersion?: string;
     state: 'running' | 'stopped';
 }
 
 export class EmulatorService {
     
+    private getAndroidOsVersion(apiLevel: string): string {
+        const mapping: Record<string, string> = {
+            '36': 'Android 16',
+            '35': 'Android 15',
+            '34': 'Android 14',
+            '33': 'Android 13',
+            '32': 'Android 12L',
+            '31': 'Android 12',
+            '30': 'Android 11',
+            '29': 'Android 10',
+            '28': 'Android 9',
+            '27': 'Android 8.1',
+            '26': 'Android 8.0',
+            '25': 'Android 7.1',
+            '24': 'Android 7.0',
+            '23': 'Android 6.0',
+            '22': 'Android 5.1',
+            '21': 'Android 5.0'
+        };
+        return mapping[apiLevel] ? `${mapping[apiLevel]} (API ${apiLevel})` : `API ${apiLevel}`;
+    }
+
     public async getEmulators(): Promise<Emulator[]> {
         const iosEmulators = await this.getIosEmulators();
         const androidEmulators = await this.getAndroidEmulators();
@@ -36,11 +60,23 @@ export class EmulatorService {
             const emulators: Emulator[] = [];
             
             for (const runtime of Object.keys(data.devices)) {
+                let osVersion = 'Unknown';
+                const match = runtime.match(/SimRuntime\.(.+?)-(\d+)-(\d+)/);
+                if (match) {
+                    osVersion = `${match[1]} ${match[2]}.${match[3]}`;
+                } else {
+                    const matchFallback = runtime.match(/SimRuntime\.(.+)$/);
+                    if (matchFallback) {
+                        osVersion = matchFallback[1].replace(/-/g, '.');
+                    }
+                }
+
                 for (const device of data.devices[runtime]) {
                     emulators.push({
                         id: device.udid,
                         name: device.name,
                         os: 'iOS',
+                        osVersion: osVersion,
                         state: device.state === 'Booted' ? 'running' : 'stopped'
                     });
                 }
@@ -83,12 +119,29 @@ export class EmulatorService {
                 // Ignore adb error
             }
 
-            return avds.map(avd => ({
-                id: avd,
-                name: avd.replace(/_/g, ' '),
-                os: 'Android',
-                state: runningEmuNames.includes(avd) ? 'running' : 'stopped'
-            }));
+            return avds.map(avd => {
+                let osVersion = 'Unknown';
+                try {
+                    const iniPath = path.join(os.homedir(), '.android', 'avd', `${avd}.avd`, 'config.ini');
+                    if (fs.existsSync(iniPath)) {
+                        const content = fs.readFileSync(iniPath, 'utf-8');
+                        const targetMatch = content.match(/target=android-(\d+)/) || content.match(/image\.sysdir\.1=.*android-(\d+)/);
+                        if (targetMatch) {
+                            osVersion = this.getAndroidOsVersion(targetMatch[1]);
+                        }
+                    }
+                } catch (e) {
+                    // ignore errors reading config.ini
+                }
+
+                return {
+                    id: avd,
+                    name: avd.replace(/_/g, ' '),
+                    os: 'Android',
+                    osVersion: osVersion,
+                    state: runningEmuNames.includes(avd) ? 'running' : 'stopped'
+                };
+            });
         } catch (error) {
             console.error('Failed to fetch Android emulators', error);
             return [];

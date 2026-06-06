@@ -35,6 +35,12 @@ export function activate(context: vscode.ExtensionContext) {
                     vscode.window.showErrorMessage(`Failed to stop ${node.emulator.name}: ${e.message}`);
                 }
             }
+        }),
+        vscode.commands.registerCommand('emulators.copyId', async (node: EmulatorTreeItem) => {
+            if (node && node.emulator) {
+                await vscode.env.clipboard.writeText(node.emulator.id);
+                vscode.window.showInformationMessage(`Copied UDID: ${node.emulator.id}`);
+            }
         })
     );
 }
