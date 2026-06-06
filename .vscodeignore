@@ -1,7 +1,15 @@
 .vscode/**
 .vscode-test/**
 src/**
+node_modules/**
+package-lock.json
 .gitignore
+*.vsix
+.DS_Store
+.github/
 **/tsconfig.json
 **/*.map
 **/*.ts
+.nvmrc
+out/emulatorService.js
+out/treeDataProvider.js 
