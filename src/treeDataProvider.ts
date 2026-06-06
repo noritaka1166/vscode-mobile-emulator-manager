@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
 import { Emulator, EmulatorService } from './emulatorService';
 
-export class EmulatorTreeDataProvider implements vscode.TreeDataProvider<EmulatorTreeItem> {
-    private _onDidChangeTreeData: vscode.EventEmitter<EmulatorTreeItem | undefined | null | void> = new vscode.EventEmitter<EmulatorTreeItem | undefined | null | void>();
-    readonly onDidChangeTreeData: vscode.Event<EmulatorTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
+type TreeDataChange = EmulatorTreeItem | undefined | null | void;
 
-    constructor(private emulatorService: EmulatorService) {}
+export class EmulatorTreeDataProvider implements vscode.TreeDataProvider<EmulatorTreeItem> {
+    private readonly _onDidChangeTreeData: vscode.EventEmitter<TreeDataChange> = new vscode.EventEmitter<TreeDataChange>();
+    readonly onDidChangeTreeData: vscode.Event<TreeDataChange> = this._onDidChangeTreeData.event;
+
+    constructor(private readonly emulatorService: EmulatorService) {}
 
     refresh(): void {
         this._onDidChangeTreeData.fire();

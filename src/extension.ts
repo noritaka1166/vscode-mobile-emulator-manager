@@ -13,7 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
             treeDataProvider.refresh();
         }),
         vscode.commands.registerCommand('emulators.start', async (node: EmulatorTreeItem) => {
-            if (node && node.emulator) {
+            if (node?.emulator) {
                 vscode.window.showInformationMessage(`Starting ${node.emulator.name}...`);
                 try {
                     await emulatorService.startEmulator(node.emulator);
@@ -25,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }),
         vscode.commands.registerCommand('emulators.stop', async (node: EmulatorTreeItem) => {
-            if (node && node.emulator) {
+            if (node?.emulator) {
                 vscode.window.showInformationMessage(`Stopping ${node.emulator.name}...`);
                 try {
                     await emulatorService.stopEmulator(node.emulator);
@@ -37,7 +37,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }),
         vscode.commands.registerCommand('emulators.copyId', async (node: EmulatorTreeItem) => {
-            if (node && node.emulator) {
+            if (node?.emulator) {
                 await vscode.env.clipboard.writeText(node.emulator.id);
                 vscode.window.showInformationMessage(`Copied UDID: ${node.emulator.id}`);
             }

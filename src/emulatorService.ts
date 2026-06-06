@@ -1,7 +1,7 @@
-import { exec } from 'child_process';
-import * as os from 'os';
-import * as path from 'path';
-import * as fs from 'fs';
+import { exec } from 'node:child_process';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import * as fs from 'node:fs';
 
 export interface Emulator {
     id: string; // uuid for iOS, name for Android
@@ -61,11 +61,13 @@ export class EmulatorService {
             
             for (const runtime of Object.keys(data.devices)) {
                 let osVersion = 'Unknown';
-                const match = runtime.match(/SimRuntime\.(.+?)-(\d+)-(\d+)/);
+                const runtimeRegex = /SimRuntime\.(.+?)-(\d+)-(\d+)/;
+                const match = runtimeRegex.exec(runtime);
                 if (match) {
                     osVersion = `${match[1]} ${match[2]}.${match[3]}`;
                 } else {
-                    const matchFallback = runtime.match(/SimRuntime\.(.+)$/);
+                    const fallbackRegex = /SimRuntime\.(.+)$/;
+                    const matchFallback = fallbackRegex.exec(runtime);
                     if (matchFallback) {
                         osVersion = matchFallback[1].replace(/-/g, '.');
                     }
@@ -155,7 +157,7 @@ export class EmulatorService {
         } else {
             const androidHome = process.env.ANDROID_HOME || path.join(os.homedir(), 'Library', 'Android', 'sdk');
             const emulatorCommand = path.join(androidHome, 'emulator', 'emulator');
-            const { spawn } = require('child_process');
+            const { spawn } = require('node:child_process');
             const child = spawn(emulatorCommand, ['-avd', emulator.id], {
                 detached: true,
                 stdio: 'ignore'
