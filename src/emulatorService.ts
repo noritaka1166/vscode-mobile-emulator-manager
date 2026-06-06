@@ -35,6 +35,31 @@ export class EmulatorService {
         return mapping[apiLevel] ? `${mapping[apiLevel]} (API ${apiLevel})` : `API ${apiLevel}`;
     }
 
+    private async isAndroidEmulatorRunning(avdName: string): Promise<boolean> {
+        const adbCommand = process.env.ANDROID_HOME ? path.join(process.env.ANDROID_HOME, 'platform-tools', 'adb') : 'adb';
+        try {
+            const adbOutput = await this.executeCommand(`"${adbCommand}" devices`);
+            const lines = adbOutput.split('\n');
+            for (const line of lines) {
+                if (line.startsWith('emulator-') && line.includes('device')) {
+                    const serial = line.split('\t')[0];
+                    try {
+                        const avdNameOut = await this.executeCommand(`"${adbCommand}" -s ${serial} emu avd name`);
+                        const avdNameLines = avdNameOut.split('\n');
+                        if (avdNameLines.length > 0 && avdNameLines[0].trim() === avdName) {
+                            return true;
+                        }
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+            }
+        } catch (error) {
+            // ignore
+        }
+        return false;
+    }
+
     public async getEmulators(): Promise<Emulator[]> {
         const iosEmulators = await this.getIosEmulators();
         const androidEmulators = await this.getAndroidEmulators();
@@ -163,6 +188,16 @@ export class EmulatorService {
                 stdio: 'ignore'
             });
             child.unref();
+
+            let retries = 30; // Wait up to 60 seconds
+            while (retries > 0) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                const isRunning = await this.isAndroidEmulatorRunning(emulator.id);
+                if (isRunning) {
+                    break;
+                }
+                retries--;
+            }
         }
     }
 

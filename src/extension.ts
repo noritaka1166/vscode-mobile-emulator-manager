@@ -14,14 +14,20 @@ export function activate(context: vscode.ExtensionContext) {
         }),
         vscode.commands.registerCommand('emulators.start', async (node: EmulatorTreeItem) => {
             if (node?.emulator) {
-                vscode.window.showInformationMessage(`Starting ${node.emulator.name}...`);
-                try {
-                    await emulatorService.startEmulator(node.emulator);
-                    vscode.window.showInformationMessage(`Started ${node.emulator.name} successfully.`);
-                    treeDataProvider.refresh();
-                } catch (e: any) {
-                    vscode.window.showErrorMessage(`Failed to start ${node.emulator.name}: ${e.message}`);
-                }
+                const emulator = node.emulator;
+                vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Starting ${emulator.name}...`,
+                    cancellable: false
+                }, async (progress) => {
+                    try {
+                        await emulatorService.startEmulator(emulator);
+                        vscode.window.showInformationMessage(`Started ${emulator.name} successfully.`);
+                        treeDataProvider.refresh();
+                    } catch (e: any) {
+                        vscode.window.showErrorMessage(`Failed to start ${emulator.name}: ${e.message}`);
+                    }
+                });
             }
         }),
         vscode.commands.registerCommand('emulators.stop', async (node: EmulatorTreeItem) => {
