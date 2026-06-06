@@ -2,13 +2,30 @@
   "name": "mobile-emulator-manager",
   "displayName": "Mobile Emulator Manager",
   "description": "Manage iOS and Android Emulators from the sidebar",
-  "publisher": "your-publisher-name",
-  "version": "0.0.1",
+  "publisher": "noritaka1166",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noritaka1166/vscode-mobile-emulator-manager.git"
+  },
+  "bugs": {
+    "url": "https://github.com/noritaka1166/vscode-mobile-emulator-manager/issues"
+  },
+  "homepage": "https://github.com/noritaka1166/vscode-mobile-emulator-manager#readme",
+  "license": "MIT",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.80.0"
   },
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "emulator",
+    "simulator",
+    "ios",
+    "android",
+    "mobile"
   ],
   "activationEvents": [],
   "main": "./out/extension.js",
@@ -84,7 +101,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.1",
-    "@types/vscode": "^1.120.0",
+    "@types/vscode": "^1.80.0",
     "typescript": "^6.0.3"
   }
 }
