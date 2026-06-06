@@ -1,0 +1,82 @@
+{
+  "name": "mobile-emulator-manager",
+  "displayName": "Mobile Emulator Manager",
+  "description": "Manage iOS and Android Emulators from the sidebar",
+  "publisher": "your-publisher-name",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "emulator-manager",
+          "title": "Emulators",
+          "icon": "$(device-mobile)"
+        }
+      ]
+    },
+    "views": {
+      "emulator-manager": [
+        {
+          "id": "emulatorsView",
+          "name": "Devices"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "emulators.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "emulators.start",
+        "title": "Start",
+        "icon": "$(play)"
+      },
+      {
+        "command": "emulators.stop",
+        "title": "Stop",
+        "icon": "$(stop)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "emulators.refresh",
+          "when": "view == emulatorsView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "emulators.start",
+          "when": "view == emulatorsView && viewItem == emulator-stopped",
+          "group": "inline"
+        },
+        {
+          "command": "emulators.stop",
+          "when": "view == emulatorsView && viewItem == emulator-running",
+          "group": "inline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^18.0.0",
+    "typescript": "^5.0.0"
+  }
+}
