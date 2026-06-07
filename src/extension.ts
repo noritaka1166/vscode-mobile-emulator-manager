@@ -42,6 +42,40 @@ export function activate(context: vscode.ExtensionContext) {
                 }
             }
         }),
+        vscode.commands.registerCommand('emulators.installApp', async (node: EmulatorTreeItem) => {
+            if (!node?.emulator) {
+                return;
+            }
+
+            const emulator = node.emulator;
+            const fileSelection = await vscode.window.showOpenDialog({
+                canSelectFiles: true,
+                canSelectFolders: false,
+                canSelectMany: false,
+                openLabel: 'Install',
+                filters: emulator.os === 'Android'
+                    ? { 'Android APK': ['apk'] }
+                    : { 'iOS IPA': ['ipa'] }
+            });
+
+            const appUri = fileSelection?.[0];
+            if (!appUri) {
+                return;
+            }
+
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Installing ${appUri.fsPath.split(/[\\/]/).pop()} to ${emulator.name}...`,
+                cancellable: false
+            }, async () => {
+                try {
+                    await emulatorService.installApp(emulator, appUri.fsPath);
+                    vscode.window.showInformationMessage(`Installed app to ${emulator.name} successfully.`);
+                } catch (e: any) {
+                    vscode.window.showErrorMessage(`Failed to install app to ${emulator.name}: ${e.message}`);
+                }
+            });
+        }),
         vscode.commands.registerCommand('emulators.copyId', async (node: EmulatorTreeItem) => {
             if (node?.emulator) {
                 await vscode.env.clipboard.writeText(node.emulator.id);
