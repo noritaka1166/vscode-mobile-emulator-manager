@@ -38,6 +38,53 @@ export class EmulatorService {
         return mapping[apiLevel] ? `${mapping[apiLevel]} (API ${apiLevel})` : `API ${apiLevel}`;
     }
 
+    private getAndroidAvdConfigPath(avdName: string): string | undefined {
+        const avdRoot = path.join(os.homedir(), '.android', 'avd');
+        const directConfigPath = path.join(avdRoot, `${avdName}.avd`, 'config.ini');
+        if (fs.existsSync(directConfigPath)) {
+            return directConfigPath;
+        }
+
+        const metadataPath = path.join(avdRoot, `${avdName}.ini`);
+        if (!fs.existsSync(metadataPath)) {
+            return undefined;
+        }
+
+        const metadata = fs.readFileSync(metadataPath, 'utf-8');
+        const absoluteAvdPath = this.getIniValue(metadata, 'path');
+        const relativeAvdPath = this.getIniValue(metadata, 'path.rel');
+        const avdPath = absoluteAvdPath || relativeAvdPath;
+        if (!avdPath) {
+            return undefined;
+        }
+
+        const resolvedAvdPath = path.isAbsolute(avdPath) ? avdPath : path.join(os.homedir(), '.android', avdPath);
+        const configPath = path.join(resolvedAvdPath, 'config.ini');
+        return fs.existsSync(configPath) ? configPath : undefined;
+    }
+
+    private getIniValue(content: string, key: string): string | undefined {
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const match = new RegExp(`^${escapedKey}\\s*=\\s*(.+)$`, 'm').exec(content);
+        return match?.[1].trim();
+    }
+
+    private getAndroidOsVersionFromConfig(content: string): string {
+        const candidates = [
+            this.getIniValue(content, 'target'),
+            this.getIniValue(content, 'image.sysdir.1')
+        ].filter((value): value is string => !!value);
+
+        for (const candidate of candidates) {
+            const apiMatch = /(?:android-|:)(\d+)(?:[/:\s]|$)/.exec(candidate);
+            if (apiMatch) {
+                return this.getAndroidOsVersion(apiMatch[1]);
+            }
+        }
+
+        return 'Unknown';
+    }
+
     private async isAndroidEmulatorRunning(avdName: string): Promise<boolean> {
         const adbCommand = this.getAdbCommand();
         try {
@@ -164,13 +211,10 @@ export class EmulatorService {
             return avds.map(avd => {
                 let osVersion = 'Unknown';
                 try {
-                    const iniPath = path.join(os.homedir(), '.android', 'avd', `${avd}.avd`, 'config.ini');
-                    if (fs.existsSync(iniPath)) {
+                    const iniPath = this.getAndroidAvdConfigPath(avd);
+                    if (iniPath && fs.existsSync(iniPath)) {
                         const content = fs.readFileSync(iniPath, 'utf-8');
-                        const targetMatch = content.match(/target=android-(\d+)/) || content.match(/image\.sysdir\.1=.*android-(\d+)/);
-                        if (targetMatch) {
-                            osVersion = this.getAndroidOsVersion(targetMatch[1]);
-                        }
+                        osVersion = this.getAndroidOsVersionFromConfig(content);
                     }
                 } catch (e) {
                     // ignore errors reading config.ini
