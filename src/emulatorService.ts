@@ -1,4 +1,4 @@
-import { exec } from 'node:child_process';
+import { exec, execFile } from 'node:child_process';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
@@ -12,6 +12,9 @@ export interface Emulator {
 }
 
 export class EmulatorService {
+    private getAdbCommand(): string {
+        return process.env.ANDROID_HOME ? path.join(process.env.ANDROID_HOME, 'platform-tools', 'adb') : 'adb';
+    }
     
     private getAndroidOsVersion(apiLevel: string): string {
         const mapping: Record<string, string> = {
@@ -35,8 +38,55 @@ export class EmulatorService {
         return mapping[apiLevel] ? `${mapping[apiLevel]} (API ${apiLevel})` : `API ${apiLevel}`;
     }
 
+    private getAndroidAvdConfigPath(avdName: string): string | undefined {
+        const avdRoot = path.join(os.homedir(), '.android', 'avd');
+        const directConfigPath = path.join(avdRoot, `${avdName}.avd`, 'config.ini');
+        if (fs.existsSync(directConfigPath)) {
+            return directConfigPath;
+        }
+
+        const metadataPath = path.join(avdRoot, `${avdName}.ini`);
+        if (!fs.existsSync(metadataPath)) {
+            return undefined;
+        }
+
+        const metadata = fs.readFileSync(metadataPath, 'utf-8');
+        const absoluteAvdPath = this.getIniValue(metadata, 'path');
+        const relativeAvdPath = this.getIniValue(metadata, 'path.rel');
+        const avdPath = absoluteAvdPath || relativeAvdPath;
+        if (!avdPath) {
+            return undefined;
+        }
+
+        const resolvedAvdPath = path.isAbsolute(avdPath) ? avdPath : path.join(os.homedir(), '.android', avdPath);
+        const configPath = path.join(resolvedAvdPath, 'config.ini');
+        return fs.existsSync(configPath) ? configPath : undefined;
+    }
+
+    private getIniValue(content: string, key: string): string | undefined {
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const match = new RegExp(`^${escapedKey}\\s*=\\s*(.+)$`, 'm').exec(content);
+        return match?.[1].trim();
+    }
+
+    private getAndroidOsVersionFromConfig(content: string): string {
+        const candidates = [
+            this.getIniValue(content, 'target'),
+            this.getIniValue(content, 'image.sysdir.1')
+        ].filter((value): value is string => !!value);
+
+        for (const candidate of candidates) {
+            const apiMatch = /(?:android-|:)(\d+)(?:[/:\s]|$)/.exec(candidate);
+            if (apiMatch) {
+                return this.getAndroidOsVersion(apiMatch[1]);
+            }
+        }
+
+        return 'Unknown';
+    }
+
     private async isAndroidEmulatorRunning(avdName: string): Promise<boolean> {
-        const adbCommand = process.env.ANDROID_HOME ? path.join(process.env.ANDROID_HOME, 'platform-tools', 'adb') : 'adb';
+        const adbCommand = this.getAdbCommand();
         try {
             const adbOutput = await this.executeCommand(`"${adbCommand}" devices`);
             const lines = adbOutput.split('\n');
@@ -71,6 +121,18 @@ export class EmulatorService {
             exec(command, (error, stdout, stderr) => {
                 if (error) {
                     reject(error);
+                } else {
+                    resolve(stdout);
+                }
+            });
+        });
+    }
+
+    private executeFile(command: string, args: string[]): Promise<string> {
+        return new Promise((resolve, reject) => {
+            execFile(command, args, (error, stdout, stderr) => {
+                if (error) {
+                    reject(new Error(stderr.trim() || error.message));
                 } else {
                     resolve(stdout);
                 }
@@ -123,7 +185,7 @@ export class EmulatorService {
             const output = await this.executeCommand(`"${emulatorCommand}" -list-avds`);
             const avds = output.split('\n').map(l => l.trim()).filter(l => l.length > 0);
             
-            const adbCommand = process.env.ANDROID_HOME ? path.join(process.env.ANDROID_HOME, 'platform-tools', 'adb') : 'adb';
+            const adbCommand = this.getAdbCommand();
             let runningEmuNames: string[] = [];
             try {
                 const adbOutput = await this.executeCommand(`"${adbCommand}" devices`);
@@ -149,13 +211,10 @@ export class EmulatorService {
             return avds.map(avd => {
                 let osVersion = 'Unknown';
                 try {
-                    const iniPath = path.join(os.homedir(), '.android', 'avd', `${avd}.avd`, 'config.ini');
-                    if (fs.existsSync(iniPath)) {
+                    const iniPath = this.getAndroidAvdConfigPath(avd);
+                    if (iniPath && fs.existsSync(iniPath)) {
                         const content = fs.readFileSync(iniPath, 'utf-8');
-                        const targetMatch = content.match(/target=android-(\d+)/) || content.match(/image\.sysdir\.1=.*android-(\d+)/);
-                        if (targetMatch) {
-                            osVersion = this.getAndroidOsVersion(targetMatch[1]);
-                        }
+                        osVersion = this.getAndroidOsVersionFromConfig(content);
                     }
                 } catch (e) {
                     // ignore errors reading config.ini
@@ -205,7 +264,7 @@ export class EmulatorService {
         if (emulator.os === 'iOS') {
             await this.executeCommand(`xcrun simctl shutdown ${emulator.id}`);
         } else {
-            const adbCommand = process.env.ANDROID_HOME ? path.join(process.env.ANDROID_HOME, 'platform-tools', 'adb') : 'adb';
+            const adbCommand = this.getAdbCommand();
             const adbOutput = await this.executeCommand(`"${adbCommand}" devices`);
             const lines = adbOutput.split('\n');
             for (const line of lines) {
@@ -224,5 +283,71 @@ export class EmulatorService {
                 }
             }
         }
+    }
+
+    public async installApp(emulator: Emulator, appPath: string): Promise<void> {
+        if (emulator.os === 'Android') {
+            await this.installAndroidApp(emulator, appPath);
+        } else {
+            await this.installIosApp(emulator, appPath);
+        }
+    }
+
+    private async installAndroidApp(emulator: Emulator, apkPath: string): Promise<void> {
+        if (path.extname(apkPath).toLowerCase() !== '.apk') {
+            throw new Error('Please select an .apk file for Android emulators.');
+        }
+
+        const serial = await this.getRunningAndroidSerial(emulator.id);
+        if (!serial) {
+            throw new Error(`${emulator.name} is not running.`);
+        }
+
+        await this.executeFile(this.getAdbCommand(), ['-s', serial, 'install', '-r', apkPath]);
+    }
+
+    private async installIosApp(emulator: Emulator, ipaPath: string): Promise<void> {
+        if (path.extname(ipaPath).toLowerCase() !== '.ipa') {
+            throw new Error('Please select an .ipa file for iOS simulators.');
+        }
+
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vscode-emulator-ipa-'));
+        try {
+            await this.executeFile('/usr/bin/unzip', ['-q', ipaPath, '-d', tempDir]);
+            const payloadDir = path.join(tempDir, 'Payload');
+            if (!fs.existsSync(payloadDir)) {
+                throw new Error('The selected .ipa does not contain a Payload directory.');
+            }
+
+            const appName = fs.readdirSync(payloadDir).find(entry => entry.toLowerCase().endsWith('.app'));
+            if (!appName) {
+                throw new Error('The selected .ipa does not contain an app bundle.');
+            }
+
+            await this.executeFile('xcrun', ['simctl', 'install', emulator.id, path.join(payloadDir, appName)]);
+        } finally {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+    }
+
+    private async getRunningAndroidSerial(avdName: string): Promise<string | undefined> {
+        const adbCommand = this.getAdbCommand();
+        const adbOutput = await this.executeCommand(`"${adbCommand}" devices`);
+        const lines = adbOutput.split('\n');
+        for (const line of lines) {
+            if (line.startsWith('emulator-') && line.includes('device')) {
+                const serial = line.split('\t')[0];
+                try {
+                    const avdNameOut = await this.executeCommand(`"${adbCommand}" -s ${serial} emu avd name`);
+                    const avdNameLines = avdNameOut.split('\n');
+                    if (avdNameLines.length > 0 && avdNameLines[0].trim() === avdName) {
+                        return serial;
+                    }
+                } catch (e) {
+                    // ignore errors querying specific device
+                }
+            }
+        }
+        return undefined;
     }
 }
