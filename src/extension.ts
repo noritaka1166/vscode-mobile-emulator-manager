@@ -25,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
                         vscode.window.showInformationMessage(`Started ${emulator.name} successfully.`);
                         treeDataProvider.refresh();
                     } catch (e: any) {
-                        vscode.window.showErrorMessage(`Failed to start ${emulator.name}: ${e.message}`);
+                        vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to start ${emulator.name}`, e));
                     }
                 });
             }
@@ -38,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
                     vscode.window.showInformationMessage(`Stopped ${node.emulator.name} successfully.`);
                     treeDataProvider.refresh();
                 } catch (e: any) {
-                    vscode.window.showErrorMessage(`Failed to stop ${node.emulator.name}: ${e.message}`);
+                    vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to stop ${node.emulator.name}`, e));
                 }
             }
         }),
@@ -72,7 +72,7 @@ export function activate(context: vscode.ExtensionContext) {
                     await emulatorService.installApp(emulator, appUri.fsPath);
                     vscode.window.showInformationMessage(`Installed app to ${emulator.name} successfully.`);
                 } catch (e: any) {
-                    vscode.window.showErrorMessage(`Failed to install app to ${emulator.name}: ${e.message}`);
+                    vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to install app to ${emulator.name}`, e));
                 }
             });
         }),
@@ -97,10 +97,81 @@ export function activate(context: vscode.ExtensionContext) {
                 await vscode.env.clipboard.writeText(serial);
                 vscode.window.showInformationMessage(`Copied ADB serial: ${serial}`);
             } catch (e: any) {
-                vscode.window.showErrorMessage(`Failed to copy ADB serial for ${node.emulator.name}: ${e.message}`);
+                vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to copy ADB serial for ${node.emulator.name}`, e));
             }
         })
     );
+}
+
+function getGuidedErrorMessage(prefix: string, error: unknown): string {
+    const details = getErrorDetails(error);
+    const guide = getCauseGuide(details);
+    return guide ? `${prefix}: ${details} ${guide}` : `${prefix}: ${details}`;
+}
+
+function getErrorDetails(error: unknown): string {
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
+
+    if (typeof error === 'string' && error.trim()) {
+        return error.trim();
+    }
+
+    return 'Unknown error.';
+}
+
+function getCauseGuide(details: string): string | undefined {
+    const normalized = details.toLowerCase();
+
+    if (matchesAny(normalized, ['adb: command not found', 'adb: not found', 'enoent']) && normalized.includes('adb')) {
+        return 'Guide: ADB was not found. Install Android SDK Platform-Tools, then set ANDROID_HOME or add adb to PATH.';
+    }
+
+    if (
+        normalized.includes('/emulator/emulator') &&
+        matchesAny(normalized, ['no such file', 'not found', 'enoent'])
+    ) {
+        return 'Guide: The Android emulator command was not found. Install Android Emulator in Android Studio and make sure ANDROID_HOME points to your SDK.';
+    }
+
+    if (normalized.includes('xcrun') && matchesAny(normalized, ['unable to find utility', 'not found', 'xcode-select'])) {
+        return 'Guide: Xcode command line tools were not found. Install Xcode and check your xcode-select configuration.';
+    }
+
+    if (normalized.includes('unable to boot device')) {
+        return 'Guide: The iOS Simulator could not boot. Check that the device is available in Xcode Devices and Simulators.';
+    }
+
+    if (normalized.includes('is not running') || normalized.includes('could not be found')) {
+        return 'Guide: Check that the target emulator is running, then refresh the device list and try again.';
+    }
+
+    if (normalized.includes('please select an .apk file')) {
+        return 'Guide: Select an .apk file for Android.';
+    }
+
+    if (normalized.includes('please select an .ipa file')) {
+        return 'Guide: Select an .ipa file for iOS Simulator.';
+    }
+
+    if (normalized.includes('does not contain a payload directory') || normalized.includes('does not contain an app bundle')) {
+        return 'Guide: The selected .ipa does not contain a Simulator-installable .app. Choose an app built for iOS Simulator.';
+    }
+
+    if (normalized.includes('install_failed') || normalized.includes('failure [')) {
+        return 'Guide: APK installation failed. Check signing, minSdk, existing app signature mismatch, and device storage.';
+    }
+
+    if (normalized.includes('failed to install') && normalized.includes('simctl')) {
+        return 'Guide: iOS Simulator installation failed. Make sure this is a Simulator build, not a device-only IPA.';
+    }
+
+    return undefined;
+}
+
+function matchesAny(value: string, needles: string[]): boolean {
+    return needles.some(needle => value.includes(needle));
 }
 
 export function deactivate() {}

@@ -120,7 +120,7 @@ export class EmulatorService {
         return new Promise((resolve, reject) => {
             exec(command, (error, stdout, stderr) => {
                 if (error) {
-                    reject(error);
+                    reject(new Error(stderr.trim() || error.message));
                 } else {
                     resolve(stdout);
                 }
