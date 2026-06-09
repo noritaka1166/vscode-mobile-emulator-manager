@@ -81,6 +81,24 @@ export function activate(context: vscode.ExtensionContext) {
                 await vscode.env.clipboard.writeText(node.emulator.id);
                 vscode.window.showInformationMessage(`Copied UDID: ${node.emulator.id}`);
             }
+        }),
+        vscode.commands.registerCommand('emulators.copyAndroidSerial', async (node: EmulatorTreeItem) => {
+            if (!node?.emulator || node.emulator.os !== 'Android') {
+                return;
+            }
+
+            try {
+                const serial = await emulatorService.getRunningAndroidSerial(node.emulator.id);
+                if (!serial) {
+                    vscode.window.showWarningMessage(`${node.emulator.name} is not running or its ADB serial could not be found.`);
+                    return;
+                }
+
+                await vscode.env.clipboard.writeText(serial);
+                vscode.window.showInformationMessage(`Copied ADB serial: ${serial}`);
+            } catch (e: any) {
+                vscode.window.showErrorMessage(`Failed to copy ADB serial for ${node.emulator.name}: ${e.message}`);
+            }
         })
     );
 }

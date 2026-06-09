@@ -73,6 +73,10 @@
       {
         "command": "emulators.copyId",
         "title": "Copy UDID"
+      },
+      {
+        "command": "emulators.copyAndroidSerial",
+        "title": "Copy ADB Serial"
       }
     ],
     "menus": {
@@ -102,6 +106,10 @@
         {
           "command": "emulators.copyId",
           "when": "view == emulatorsView && viewItem =~ /^emulator-ios-/"
+        },
+        {
+          "command": "emulators.copyAndroidSerial",
+          "when": "view == emulatorsView && viewItem == emulator-android-running"
         }
       ]
     }

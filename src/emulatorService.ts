@@ -264,23 +264,9 @@ export class EmulatorService {
         if (emulator.os === 'iOS') {
             await this.executeCommand(`xcrun simctl shutdown ${emulator.id}`);
         } else {
-            const adbCommand = this.getAdbCommand();
-            const adbOutput = await this.executeCommand(`"${adbCommand}" devices`);
-            const lines = adbOutput.split('\n');
-            for (const line of lines) {
-                if (line.startsWith('emulator-') && line.includes('device')) {
-                    const serial = line.split('\t')[0];
-                    try {
-                        const avdNameOut = await this.executeCommand(`"${adbCommand}" -s ${serial} emu avd name`);
-                        const avdNameLines = avdNameOut.split('\n');
-                        if (avdNameLines.length > 0 && avdNameLines[0].trim() === emulator.id) {
-                            await this.executeCommand(`"${adbCommand}" -s ${serial} emu kill`);
-                            return;
-                        }
-                    } catch (e) {
-                        // ignore
-                    }
-                }
+            const serial = await this.getRunningAndroidSerial(emulator.id);
+            if (serial) {
+                await this.executeFile(this.getAdbCommand(), ['-s', serial, 'emu', 'kill']);
             }
         }
     }
@@ -330,7 +316,7 @@ export class EmulatorService {
         }
     }
 
-    private async getRunningAndroidSerial(avdName: string): Promise<string | undefined> {
+    public async getRunningAndroidSerial(avdName: string): Promise<string | undefined> {
         const adbCommand = this.getAdbCommand();
         const adbOutput = await this.executeCommand(`"${adbCommand}" devices`);
         const lines = adbOutput.split('\n');
