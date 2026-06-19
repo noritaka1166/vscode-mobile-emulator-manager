@@ -17,6 +17,15 @@
   "engines": {
     "vscode": "^1.80.0"
   },
+  "extensionKind": [
+    "ui"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Mobile Emulator Manager runs local Android SDK and Xcode command-line tools to list, start, stop, and install apps on emulators."
+    }
+  },
   "categories": [
     "Other"
   ],
