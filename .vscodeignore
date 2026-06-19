@@ -11,5 +11,5 @@ package-lock.json
 **/*.map
 **/*.ts
 .nvmrc
-out/emulatorService.js
-out/treeDataProvider.js 
+out/**
+!out/extension.js
