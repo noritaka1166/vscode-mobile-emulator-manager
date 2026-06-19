@@ -12,6 +12,7 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 - **Quick Start from Command Palette:** Run **Mobile Emulator Manager: Start Device...** to choose Android or iOS, then start a stopped device without opening the sidebar.
 - **Stop Devices:** Shut down running emulators quickly without needing terminal commands.
 - **Install Apps:** Right-click a running Android emulator or iOS simulator and select an `.apk` or `.ipa` file to install.
+- **Install Last App:** Reinstall the most recently installed `.apk` or `.ipa` for the selected platform without browsing for the file again.
 - **Start and Install Apps:** Right-click a stopped device, select an app file, and let the extension start the device before installing it.
 - **Copy UDID (iOS):** Right-click any iOS simulator to easily copy its UDID to your clipboard.
 - **Copy ADB Serial (Android):** Right-click a running Android emulator to copy its active ADB serial, such as `emulator-5554`.
@@ -36,9 +37,10 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 3. Click the **Play** (start) or **Stop** button next to a device to control it.
 4. Run **Mobile Emulator Manager: Start Device...** from the Command Palette, choose Android or iOS, then start a stopped device from Quick Pick.
 5. Right-click a running device and select **Install App...** to choose an `.apk` or `.ipa` file.
-6. Right-click a stopped device and select **Start and Install App...** to start it and install an app in one flow.
-7. For iOS devices, right-click and select **Copy UDID** to copy the device ID.
-8. For running Android emulators, right-click and select **Copy ADB Serial** to copy the active ADB serial.
+6. Right-click a running device and select **Install Last App** to reinstall the most recent app for that platform.
+7. Right-click a stopped device and select **Start and Install App...** to start it and install an app in one flow.
+8. For iOS devices, right-click and select **Copy UDID** to copy the device ID.
+9. For running Android emulators, right-click and select **Copy ADB Serial** to copy the active ADB serial.
 
 ## Troubleshooting
 

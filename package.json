@@ -87,6 +87,11 @@
         "icon": "$(cloud-upload)"
       },
       {
+        "command": "emulators.installLastApp",
+        "title": "Install Last App",
+        "icon": "$(history)"
+      },
+      {
         "command": "emulators.startAndInstallApp",
         "title": "Start and Install App...",
         "icon": "$(run-all)"
@@ -126,6 +131,11 @@
         },
         {
           "command": "emulators.installApp",
+          "when": "view == emulatorsView && viewItem =~ /running$/",
+          "group": "inline"
+        },
+        {
+          "command": "emulators.installLastApp",
           "when": "view == emulatorsView && viewItem =~ /running$/",
           "group": "inline"
         },

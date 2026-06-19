@@ -2,6 +2,9 @@ import * as vscode from 'vscode';
 import { Emulator, EmulatorService } from './emulatorService';
 import { EmulatorTreeDataProvider, EmulatorTreeItem } from './treeDataProvider';
 
+const LAST_ANDROID_APP_PATH_KEY = 'lastAndroidAppPath';
+const LAST_IOS_APP_PATH_KEY = 'lastIosAppPath';
+
 export function activate(context: vscode.ExtensionContext) {
     const emulatorService = new EmulatorService();
     const treeDataProvider = new EmulatorTreeDataProvider(emulatorService);
@@ -108,9 +111,42 @@ export function activate(context: vscode.ExtensionContext) {
             }, async () => {
                 try {
                     await emulatorService.installApp(emulator, appUri.fsPath);
+                    await saveLastAppPath(context, emulator.os, appUri.fsPath);
                     vscode.window.showInformationMessage(`Installed app to ${emulator.name} successfully.`);
                 } catch (e: any) {
                     vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to install app to ${emulator.name}`, e));
+                }
+            });
+        }),
+        vscode.commands.registerCommand('emulators.installLastApp', async (node: EmulatorTreeItem) => {
+            if (!node?.emulator) {
+                return;
+            }
+
+            const emulator = node.emulator;
+            const appPath = getLastAppPath(context, emulator.os);
+            if (!appPath) {
+                vscode.window.showInformationMessage(`No recent ${getAppFileExtension(emulator.os)} file found for ${emulator.os}. Use Install App... first.`);
+                return;
+            }
+
+            try {
+                await vscode.workspace.fs.stat(vscode.Uri.file(appPath));
+            } catch {
+                vscode.window.showWarningMessage(`The last ${emulator.os} app file no longer exists: ${appPath}`);
+                return;
+            }
+
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Installing ${getFileName(appPath)} to ${emulator.name}...`,
+                cancellable: false
+            }, async () => {
+                try {
+                    await emulatorService.installApp(emulator, appPath);
+                    vscode.window.showInformationMessage(`Installed ${getFileName(appPath)} to ${emulator.name} successfully.`);
+                } catch (e: any) {
+                    vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to install last app to ${emulator.name}`, e));
                 }
             });
         }),
@@ -133,6 +169,7 @@ export function activate(context: vscode.ExtensionContext) {
                 try {
                     await emulatorService.startEmulator(emulator);
                     await emulatorService.installApp(emulator, appUri.fsPath);
+                    await saveLastAppPath(context, emulator.os, appUri.fsPath);
                     vscode.window.showInformationMessage(`Started ${emulator.name} and installed app successfully.`);
                     treeDataProvider.refresh();
                 } catch (e: any) {
@@ -165,6 +202,26 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+}
+
+function getLastAppPath(context: vscode.ExtensionContext, os: 'iOS' | 'Android'): string | undefined {
+    return context.globalState.get<string>(getLastAppPathKey(os));
+}
+
+async function saveLastAppPath(context: vscode.ExtensionContext, os: 'iOS' | 'Android', appPath: string): Promise<void> {
+    await context.globalState.update(getLastAppPathKey(os), appPath);
+}
+
+function getLastAppPathKey(os: 'iOS' | 'Android'): string {
+    return os === 'Android' ? LAST_ANDROID_APP_PATH_KEY : LAST_IOS_APP_PATH_KEY;
+}
+
+function getAppFileExtension(os: 'iOS' | 'Android'): string {
+    return os === 'Android' ? '.apk' : '.ipa';
+}
+
+function getFileName(filePath: string): string {
+    return filePath.split(/[\\/]/).pop() || filePath;
 }
 
 async function startEmulatorWithProgress(
