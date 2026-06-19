@@ -10,12 +10,16 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 - **Stop Devices:** Shut down running emulators quickly without needing terminal commands.
 - **Install Apps:** Right-click a running Android emulator or iOS simulator and select an `.apk` or `.ipa` file to install.
 - **Copy UDID (iOS):** Right-click any iOS simulator to easily copy its UDID to your clipboard.
+- **Copy ADB Serial (Android):** Right-click a running Android emulator to copy its active ADB serial, such as `emulator-5554`.
+- **Helpful Error Guidance:** When a start, stop, install, or copy action fails, the extension shows common next steps for issues like missing `adb`, missing Android Emulator tools, Xcode command line tool problems, unsupported app files, or devices that are not running.
 
 ## Requirements
 
 - **iOS:** Requires Xcode and `xcrun simctl` command line tools to be installed. (Mac only)
 - **Android:** Requires Android Studio / Android SDK to be installed. 
   - By default, the extension looks for the Android SDK at `~/Library/Android/sdk` or checks the `ANDROID_HOME` environment variable.
+  - Android SDK Platform-Tools must be available so the extension can run `adb`.
+  - Android Emulator must be installed so the extension can list and start AVDs.
 
 ## Usage
 
@@ -24,6 +28,15 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 3. Click the **Play** (start) or **Stop** button next to a device to control it.
 4. Right-click a running device and select **Install App...** to choose an `.apk` or `.ipa` file.
 5. For iOS devices, right-click and select **Copy UDID** to copy the device ID.
+6. For running Android emulators, right-click and select **Copy ADB Serial** to copy the active ADB serial.
+
+## Troubleshooting
+
+- If Android devices do not appear, make sure Android Studio, Android SDK, Android Emulator, and Android SDK Platform-Tools are installed.
+- If Android actions fail with an `adb` error, set `ANDROID_HOME` to your Android SDK path or add `adb` to your `PATH`.
+- If iOS devices do not appear or fail to start, make sure Xcode is installed and `xcrun simctl` works from your terminal.
+- If app installation fails, select an `.apk` for Android and an `.ipa` containing a Simulator-installable `.app` for iOS Simulator.
+- If the device state looks stale, use the refresh button in the Devices view.
 
 ## License
 
