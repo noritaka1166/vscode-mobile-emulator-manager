@@ -71,6 +71,11 @@
         "icon": "$(cloud-upload)"
       },
       {
+        "command": "emulators.startAndInstallApp",
+        "title": "Start and Install App...",
+        "icon": "$(run-all)"
+      },
+      {
         "command": "emulators.copyId",
         "title": "Copy UDID"
       },
@@ -90,6 +95,11 @@
       "view/item/context": [
         {
           "command": "emulators.start",
+          "when": "view == emulatorsView && viewItem =~ /stopped$/",
+          "group": "inline"
+        },
+        {
+          "command": "emulators.startAndInstallApp",
           "when": "view == emulatorsView && viewItem =~ /stopped$/",
           "group": "inline"
         },

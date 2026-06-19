@@ -48,17 +48,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             const emulator = node.emulator;
-            const fileSelection = await vscode.window.showOpenDialog({
-                canSelectFiles: true,
-                canSelectFolders: false,
-                canSelectMany: false,
-                openLabel: 'Install',
-                filters: emulator.os === 'Android'
-                    ? { 'Android APK': ['apk'] }
-                    : { 'iOS IPA': ['ipa'] }
-            });
-
-            const appUri = fileSelection?.[0];
+            const appUri = await selectAppFile(emulator.os);
             if (!appUri) {
                 return;
             }
@@ -73,6 +63,32 @@ export function activate(context: vscode.ExtensionContext) {
                     vscode.window.showInformationMessage(`Installed app to ${emulator.name} successfully.`);
                 } catch (e: any) {
                     vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to install app to ${emulator.name}`, e));
+                }
+            });
+        }),
+        vscode.commands.registerCommand('emulators.startAndInstallApp', async (node: EmulatorTreeItem) => {
+            if (!node?.emulator) {
+                return;
+            }
+
+            const emulator = node.emulator;
+            const appUri = await selectAppFile(emulator.os);
+            if (!appUri) {
+                return;
+            }
+
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Starting ${emulator.name} and installing ${appUri.fsPath.split(/[\\/]/).pop()}...`,
+                cancellable: false
+            }, async () => {
+                try {
+                    await emulatorService.startEmulator(emulator);
+                    await emulatorService.installApp(emulator, appUri.fsPath);
+                    vscode.window.showInformationMessage(`Started ${emulator.name} and installed app successfully.`);
+                    treeDataProvider.refresh();
+                } catch (e: any) {
+                    vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to start and install app to ${emulator.name}`, e));
                 }
             });
         }),
@@ -101,6 +117,20 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+}
+
+async function selectAppFile(os: 'iOS' | 'Android'): Promise<vscode.Uri | undefined> {
+    const fileSelection = await vscode.window.showOpenDialog({
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        openLabel: 'Install',
+        filters: os === 'Android'
+            ? { 'Android APK': ['apk'] }
+            : { 'iOS IPA': ['ipa'] }
+    });
+
+    return fileSelection?.[0];
 }
 
 function getGuidedErrorMessage(prefix: string, error: unknown): string {
