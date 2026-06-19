@@ -125,7 +125,7 @@
   "devDependencies": {
     "@types/node": "^24.13.1",
     "@types/vscode": "^1.80.0",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.1",
     "typescript": "^6.0.3"
   }
 }
