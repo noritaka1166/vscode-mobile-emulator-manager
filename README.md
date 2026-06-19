@@ -18,9 +18,13 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 
 - **iOS:** Requires Xcode and `xcrun simctl` command line tools to be installed. (Mac only)
 - **Android:** Requires Android Studio / Android SDK to be installed. 
-  - By default, the extension looks for the Android SDK at `~/Library/Android/sdk` or checks the `ANDROID_HOME` environment variable.
+  - By default, the extension uses the `mobileEmulatorManager.androidSdkPath` VS Code setting, then `ANDROID_HOME`, then `~/Library/Android/sdk`.
   - Android SDK Platform-Tools must be available so the extension can run `adb`.
   - Android Emulator must be installed so the extension can list and start AVDs.
+
+## Settings
+
+- **`mobileEmulatorManager.androidSdkPath`:** Optional path to your Android SDK. Use this when your SDK is not in `~/Library/Android/sdk` or `ANDROID_HOME` is not set.
 
 ## Usage
 
@@ -35,7 +39,7 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 ## Troubleshooting
 
 - If Android devices do not appear, make sure Android Studio, Android SDK, Android Emulator, and Android SDK Platform-Tools are installed.
-- If Android actions fail with an `adb` error, set `ANDROID_HOME` to your Android SDK path or add `adb` to your `PATH`.
+- If Android actions fail with an `adb` error, set `mobileEmulatorManager.androidSdkPath` or `ANDROID_HOME` to your Android SDK path, or add `adb` to your `PATH`.
 - If iOS devices do not appear or fail to start, make sure Xcode is installed and `xcrun simctl` works from your terminal.
 - If app installation fails, select an `.apk` for Android and an `.ipa` containing a Simulator-installable `.app` for iOS Simulator.
 - If the device state looks stale, use the refresh button in the Devices view.

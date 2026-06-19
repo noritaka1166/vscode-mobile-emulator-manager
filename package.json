@@ -32,6 +32,17 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "Mobile Emulator Manager",
+      "properties": {
+        "mobileEmulatorManager.androidSdkPath": {
+          "type": "string",
+          "default": "",
+          "scope": "machine-overridable",
+          "markdownDescription": "Path to the Android SDK. When empty, the extension uses `ANDROID_HOME` or `~/Library/Android/sdk`."
+        }
+      }
+    },
     "viewsContainers": {
       "activitybar": [
         {

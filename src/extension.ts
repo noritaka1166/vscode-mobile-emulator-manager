@@ -155,14 +155,14 @@ function getCauseGuide(details: string): string | undefined {
     const normalized = details.toLowerCase();
 
     if (matchesAny(normalized, ['adb: command not found', 'adb: not found', 'enoent']) && normalized.includes('adb')) {
-        return 'Guide: ADB was not found. Install Android SDK Platform-Tools, then set ANDROID_HOME or add adb to PATH.';
+        return 'Guide: ADB was not found. Install Android SDK Platform-Tools, then set mobileEmulatorManager.androidSdkPath, ANDROID_HOME, or add adb to PATH.';
     }
 
     if (
         normalized.includes('/emulator/emulator') &&
         matchesAny(normalized, ['no such file', 'not found', 'enoent'])
     ) {
-        return 'Guide: The Android emulator command was not found. Install Android Emulator in Android Studio and make sure ANDROID_HOME points to your SDK.';
+        return 'Guide: The Android emulator command was not found. Install Android Emulator in Android Studio and make sure mobileEmulatorManager.androidSdkPath or ANDROID_HOME points to your SDK.';
     }
 
     if (normalized.includes('xcrun') && matchesAny(normalized, ['unable to find utility', 'not found', 'xcode-select'])) {

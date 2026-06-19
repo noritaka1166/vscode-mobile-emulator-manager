@@ -2,6 +2,7 @@ import { exec, execFile } from 'node:child_process';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
+import * as vscode from 'vscode';
 
 export interface Emulator {
     id: string; // uuid for iOS, name for Android
@@ -13,7 +14,48 @@ export interface Emulator {
 
 export class EmulatorService {
     private getAdbCommand(): string {
-        return process.env.ANDROID_HOME ? path.join(process.env.ANDROID_HOME, 'platform-tools', 'adb') : 'adb';
+        const configuredOrEnvSdkPath = this.getConfiguredAndroidSdkPath() || process.env.ANDROID_HOME?.trim();
+        if (configuredOrEnvSdkPath) {
+            return path.join(this.expandHome(configuredOrEnvSdkPath), 'platform-tools', 'adb');
+        }
+
+        const defaultAdbCommand = path.join(this.getDefaultAndroidSdkPath(), 'platform-tools', 'adb');
+        return fs.existsSync(defaultAdbCommand) ? defaultAdbCommand : 'adb';
+    }
+
+    private getAndroidSdkPath(): string {
+        const configuredSdkPath = this.getConfiguredAndroidSdkPath();
+        if (configuredSdkPath) {
+            return configuredSdkPath;
+        }
+
+        const androidHome = process.env.ANDROID_HOME?.trim();
+        return androidHome ? this.expandHome(androidHome) : this.getDefaultAndroidSdkPath();
+    }
+
+    private getConfiguredAndroidSdkPath(): string | undefined {
+        const configuredPath = vscode.workspace
+            .getConfiguration('mobileEmulatorManager')
+            .get<string>('androidSdkPath')
+            ?.trim();
+
+        return configuredPath ? this.expandHome(configuredPath) : undefined;
+    }
+
+    private getDefaultAndroidSdkPath(): string {
+        return path.join(os.homedir(), 'Library', 'Android', 'sdk');
+    }
+
+    private expandHome(filePath: string): string {
+        if (filePath === '~') {
+            return os.homedir();
+        }
+
+        if (filePath.startsWith('~/') || filePath.startsWith('~\\')) {
+            return path.join(os.homedir(), filePath.slice(2));
+        }
+
+        return filePath;
     }
     
     private getAndroidOsVersion(apiLevel: string): string {
@@ -179,7 +221,7 @@ export class EmulatorService {
 
     private async getAndroidEmulators(): Promise<Emulator[]> {
         try {
-            const androidHome = process.env.ANDROID_HOME || path.join(os.homedir(), 'Library', 'Android', 'sdk');
+            const androidHome = this.getAndroidSdkPath();
             const emulatorCommand = path.join(androidHome, 'emulator', 'emulator');
             
             const output = await this.executeCommand(`"${emulatorCommand}" -list-avds`);
@@ -239,7 +281,7 @@ export class EmulatorService {
             await this.executeCommand(`xcrun simctl boot ${emulator.id}`);
             await this.executeCommand(`open -a Simulator`);
         } else {
-            const androidHome = process.env.ANDROID_HOME || path.join(os.homedir(), 'Library', 'Android', 'sdk');
+            const androidHome = this.getAndroidSdkPath();
             const emulatorCommand = path.join(androidHome, 'emulator', 'emulator');
             const { spawn } = require('node:child_process');
             const child = spawn(emulatorCommand, ['-avd', emulator.id], {
