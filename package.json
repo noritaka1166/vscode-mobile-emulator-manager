@@ -72,6 +72,11 @@
         "icon": "$(play)"
       },
       {
+        "command": "emulators.quickStart",
+        "title": "Mobile Emulator Manager: Start Device...",
+        "icon": "$(play)"
+      },
+      {
         "command": "emulators.stop",
         "title": "Stop",
         "icon": "$(stop)"

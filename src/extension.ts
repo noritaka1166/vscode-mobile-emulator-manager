@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { EmulatorService } from './emulatorService';
+import { Emulator, EmulatorService } from './emulatorService';
 import { EmulatorTreeDataProvider, EmulatorTreeItem } from './treeDataProvider';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -14,21 +14,43 @@ export function activate(context: vscode.ExtensionContext) {
         }),
         vscode.commands.registerCommand('emulators.start', async (node: EmulatorTreeItem) => {
             if (node?.emulator) {
-                const emulator = node.emulator;
-                vscode.window.withProgress({
-                    location: vscode.ProgressLocation.Notification,
-                    title: `Starting ${emulator.name}...`,
-                    cancellable: false
-                }, async (progress) => {
-                    try {
-                        await emulatorService.startEmulator(emulator);
-                        vscode.window.showInformationMessage(`Started ${emulator.name} successfully.`);
-                        treeDataProvider.refresh();
-                    } catch (e: any) {
-                        vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to start ${emulator.name}`, e));
-                    }
-                });
+                await startEmulatorWithProgress(node.emulator, emulatorService, treeDataProvider);
             }
+        }),
+        vscode.commands.registerCommand('emulators.quickStart', async () => {
+            let emulators: Emulator[];
+            try {
+                emulators = await emulatorService.getEmulators();
+            } catch (e: any) {
+                vscode.window.showErrorMessage(getGuidedErrorMessage('Failed to load devices', e));
+                return;
+            }
+
+            const stoppedEmulators = emulators.filter(emulator => emulator.state === 'stopped');
+            if (stoppedEmulators.length === 0) {
+                vscode.window.showInformationMessage('No stopped devices are available to start.');
+                return;
+            }
+
+            const selected = await vscode.window.showQuickPick(
+                stoppedEmulators.map(emulator => ({
+                    label: emulator.name,
+                    description: emulator.osVersion || emulator.os,
+                    detail: `${emulator.os} • ${emulator.id}`,
+                    emulator
+                })),
+                {
+                    matchOnDescription: true,
+                    matchOnDetail: true,
+                    placeHolder: 'Select a device to start'
+                }
+            );
+
+            if (!selected) {
+                return;
+            }
+
+            await startEmulatorWithProgress(selected.emulator, emulatorService, treeDataProvider);
         }),
         vscode.commands.registerCommand('emulators.stop', async (node: EmulatorTreeItem) => {
             if (node?.emulator) {
@@ -117,6 +139,26 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+}
+
+async function startEmulatorWithProgress(
+    emulator: Emulator,
+    emulatorService: EmulatorService,
+    treeDataProvider: EmulatorTreeDataProvider
+): Promise<void> {
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Starting ${emulator.name}...`,
+        cancellable: false
+    }, async () => {
+        try {
+            await emulatorService.startEmulator(emulator);
+            vscode.window.showInformationMessage(`Started ${emulator.name} successfully.`);
+            treeDataProvider.refresh();
+        } catch (e: any) {
+            vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to start ${emulator.name}`, e));
+        }
+    });
 }
 
 async function selectAppFile(os: 'iOS' | 'Android'): Promise<vscode.Uri | undefined> {
