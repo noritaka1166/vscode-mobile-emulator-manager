@@ -10,6 +10,7 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 - **Smart Grouping:** Devices are neatly grouped by their OS Version (e.g., `iOS 26.0`, `Android 16 (API 36)`), making it easy to find the exact environment you need.
 - **Start Devices:** Boot up your simulator/emulator with a single click. A loading indicator will appear, ensuring the device is fully booted and recognized before the status updates.
 - **Quick Start from Command Palette:** Run **Mobile Emulator Manager: Start Device...** to choose Android or iOS, then start a stopped device without opening the sidebar.
+- **Quick Start and Install from Command Palette:** Run **Mobile Emulator Manager: Start and Install App...** to choose a stopped device and install an app in one flow.
 - **Stop Devices:** Shut down running emulators quickly without needing terminal commands.
 - **Install Apps:** Right-click a running Android emulator or iOS simulator and select an `.apk` or `.ipa` file to install.
 - **Install Last App:** Reinstall the most recently installed `.apk` or `.ipa` for the selected platform without browsing for the file again.
@@ -36,11 +37,12 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 2. You will see a list of iOS and Android devices, categorized by their OS version.
 3. Click the **Play** (start) or **Stop** button next to a device to control it.
 4. Run **Mobile Emulator Manager: Start Device...** from the Command Palette, choose Android or iOS, then start a stopped device from Quick Pick.
-5. Right-click a running device and select **Install App...** to choose an `.apk` or `.ipa` file.
-6. Right-click a running device and select **Install Last App** to reinstall the most recent app for that platform.
-7. Right-click a stopped device and select **Start and Install App...** to start it and install an app in one flow.
-8. For iOS devices, right-click and select **Copy UDID** to copy the device ID.
-9. For running Android emulators, right-click and select **Copy ADB Serial** to copy the active ADB serial.
+5. Run **Mobile Emulator Manager: Start and Install App...** from the Command Palette to choose a stopped device and install an app after it starts.
+6. Right-click a running device and select **Install App...** to choose an `.apk` or `.ipa` file.
+7. Right-click a running device and select **Install Last App** to reinstall the most recent app for that platform.
+8. Right-click a stopped device and select **Start and Install App...** to start it and install an app in one flow.
+9. For iOS devices, right-click and select **Copy UDID** to copy the device ID.
+10. For running Android emulators, right-click and select **Copy ADB Serial** to copy the active ADB serial.
 
 ## Troubleshooting
 

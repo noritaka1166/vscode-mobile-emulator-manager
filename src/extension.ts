@@ -21,65 +21,25 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }),
         vscode.commands.registerCommand('emulators.quickStart', async () => {
-            let emulators: Emulator[];
-            try {
-                emulators = await emulatorService.getEmulators();
-            } catch (e: any) {
-                vscode.window.showErrorMessage(getGuidedErrorMessage('Failed to load devices', e));
+            const emulator = await selectStoppedEmulator(emulatorService, 'start');
+            if (!emulator) {
                 return;
             }
 
-            const stoppedEmulators = emulators.filter(emulator => emulator.state === 'stopped');
-            if (stoppedEmulators.length === 0) {
-                vscode.window.showInformationMessage('No stopped devices are available to start.');
+            await startEmulatorWithProgress(emulator, emulatorService, treeDataProvider);
+        }),
+        vscode.commands.registerCommand('emulators.quickStartAndInstallApp', async () => {
+            const emulator = await selectStoppedEmulator(emulatorService, 'start and install to');
+            if (!emulator) {
                 return;
             }
 
-            const selectedOs = await vscode.window.showQuickPick(
-                [
-                    {
-                        label: 'Android',
-                        description: `${stoppedEmulators.filter(emulator => emulator.os === 'Android').length} stopped`
-                    },
-                    {
-                        label: 'iOS',
-                        description: `${stoppedEmulators.filter(emulator => emulator.os === 'iOS').length} stopped`
-                    }
-                ],
-                {
-                    placeHolder: 'Select a platform'
-                }
-            );
-
-            if (!selectedOs) {
+            const appUri = await selectAppFile(emulator.os);
+            if (!appUri) {
                 return;
             }
 
-            const platformEmulators = stoppedEmulators.filter(emulator => emulator.os === selectedOs.label);
-            if (platformEmulators.length === 0) {
-                vscode.window.showInformationMessage(`No stopped ${selectedOs.label} devices are available to start.`);
-                return;
-            }
-
-            const selected = await vscode.window.showQuickPick(
-                platformEmulators.map(emulator => ({
-                    label: emulator.name,
-                    description: emulator.osVersion || emulator.os,
-                    detail: `${emulator.os} • ${emulator.id}`,
-                    emulator
-                })),
-                {
-                    matchOnDescription: true,
-                    matchOnDetail: true,
-                    placeHolder: `Select a ${selectedOs.label} device to start`
-                }
-            );
-
-            if (!selected) {
-                return;
-            }
-
-            await startEmulatorWithProgress(selected.emulator, emulatorService, treeDataProvider);
+            await startAndInstallAppWithProgress(emulator, appUri.fsPath, emulatorService, treeDataProvider, context);
         }),
         vscode.commands.registerCommand('emulators.stop', async (node: EmulatorTreeItem) => {
             if (node?.emulator) {
@@ -161,21 +121,7 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: `Starting ${emulator.name} and installing ${appUri.fsPath.split(/[\\/]/).pop()}...`,
-                cancellable: false
-            }, async () => {
-                try {
-                    await emulatorService.startEmulator(emulator);
-                    await emulatorService.installApp(emulator, appUri.fsPath);
-                    await saveLastAppPath(context, emulator.os, appUri.fsPath);
-                    vscode.window.showInformationMessage(`Started ${emulator.name} and installed app successfully.`);
-                    treeDataProvider.refresh();
-                } catch (e: any) {
-                    vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to start and install app to ${emulator.name}`, e));
-                }
-            });
+            await startAndInstallAppWithProgress(emulator, appUri.fsPath, emulatorService, treeDataProvider, context);
         }),
         vscode.commands.registerCommand('emulators.copyId', async (node: EmulatorTreeItem) => {
             if (node?.emulator) {
@@ -202,6 +148,64 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+}
+
+async function selectStoppedEmulator(emulatorService: EmulatorService, actionLabel: string): Promise<Emulator | undefined> {
+    let emulators: Emulator[];
+    try {
+        emulators = await emulatorService.getEmulators();
+    } catch (e: any) {
+        vscode.window.showErrorMessage(getGuidedErrorMessage('Failed to load devices', e));
+        return undefined;
+    }
+
+    const stoppedEmulators = emulators.filter(emulator => emulator.state === 'stopped');
+    if (stoppedEmulators.length === 0) {
+        vscode.window.showInformationMessage('No stopped devices are available.');
+        return undefined;
+    }
+
+    const selectedOs = await vscode.window.showQuickPick(
+        [
+            {
+                label: 'Android',
+                description: `${stoppedEmulators.filter(emulator => emulator.os === 'Android').length} stopped`
+            },
+            {
+                label: 'iOS',
+                description: `${stoppedEmulators.filter(emulator => emulator.os === 'iOS').length} stopped`
+            }
+        ],
+        {
+            placeHolder: 'Select a platform'
+        }
+    );
+
+    if (!selectedOs) {
+        return undefined;
+    }
+
+    const platformEmulators = stoppedEmulators.filter(emulator => emulator.os === selectedOs.label);
+    if (platformEmulators.length === 0) {
+        vscode.window.showInformationMessage(`No stopped ${selectedOs.label} devices are available.`);
+        return undefined;
+    }
+
+    const selected = await vscode.window.showQuickPick(
+        platformEmulators.map(emulator => ({
+            label: emulator.name,
+            description: emulator.osVersion || emulator.os,
+            detail: `${emulator.os} • ${emulator.id}`,
+            emulator
+        })),
+        {
+            matchOnDescription: true,
+            matchOnDetail: true,
+            placeHolder: `Select a ${selectedOs.label} device to ${actionLabel}`
+        }
+    );
+
+    return selected?.emulator;
 }
 
 function getLastAppPath(context: vscode.ExtensionContext, os: 'iOS' | 'Android'): string | undefined {
@@ -240,6 +244,30 @@ async function startEmulatorWithProgress(
             treeDataProvider.refresh();
         } catch (e: any) {
             vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to start ${emulator.name}`, e));
+        }
+    });
+}
+
+async function startAndInstallAppWithProgress(
+    emulator: Emulator,
+    appPath: string,
+    emulatorService: EmulatorService,
+    treeDataProvider: EmulatorTreeDataProvider,
+    context: vscode.ExtensionContext
+): Promise<void> {
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Starting ${emulator.name} and installing ${getFileName(appPath)}...`,
+        cancellable: false
+    }, async () => {
+        try {
+            await emulatorService.startEmulator(emulator);
+            await emulatorService.installApp(emulator, appPath);
+            await saveLastAppPath(context, emulator.os, appPath);
+            vscode.window.showInformationMessage(`Started ${emulator.name} and installed app successfully.`);
+            treeDataProvider.refresh();
+        } catch (e: any) {
+            vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to start and install app to ${emulator.name}`, e));
         }
     });
 }

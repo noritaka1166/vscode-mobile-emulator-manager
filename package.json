@@ -77,6 +77,11 @@
         "icon": "$(play)"
       },
       {
+        "command": "emulators.quickStartAndInstallApp",
+        "title": "Mobile Emulator Manager: Start and Install App...",
+        "icon": "$(run-all)"
+      },
+      {
         "command": "emulators.stop",
         "title": "Stop",
         "icon": "$(stop)"
