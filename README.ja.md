@@ -18,6 +18,7 @@ VS Codeのサイドバーから、iOS SimulatorとAndroid Emulatorを一覧表�
 - **UDIDコピー (iOS):** iOS Simulatorを右クリックしてUDIDをクリップボードへコピーできます。
 - **ADB Serialコピー (Android):** 実行中のAndroid Emulatorを右クリックして、`emulator-5554` のようなADB serialをコピーできます。
 - **エラー時のガイド:** 起動、停止、インストール、コピー操作に失敗した場合、`adb` 未検出、Android Emulatorツール未検出、Xcode command line toolsの問題、未対応ファイル、端末未起動などの原因に応じたヒントを表示します。
+- **詳細ログ:** **Mobile Emulator Manager** Output channelに、操作内容、実行コマンド、失敗時の詳細を記録します。
 
 ## 必要条件
 
@@ -51,6 +52,7 @@ VS Codeのサイドバーから、iOS SimulatorとAndroid Emulatorを一覧表�
 - iOS端末が表示されない、または起動に失敗する場合は、Xcodeがインストールされていて、ターミナルから `xcrun simctl` を実行できるか確認してください。
 - アプリのインストールに失敗する場合は、Androidには `.apk`、iOS SimulatorにはSimulatorへインストール可能な `.app` を含む `.ipa` を選択してください。
 - 端末の状態表示が古い場合は、DevicesビューのRefreshボタンを押してください。
+- 実行コマンドや失敗時の詳細を確認したい場合は、VS CodeのOutputパネルで **Mobile Emulator Manager** channelを開いてください。
 
 ## ライセンス
 

@@ -18,6 +18,7 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 - **Copy UDID (iOS):** Right-click any iOS simulator to easily copy its UDID to your clipboard.
 - **Copy ADB Serial (Android):** Right-click a running Android emulator to copy its active ADB serial, such as `emulator-5554`.
 - **Helpful Error Guidance:** When a start, stop, install, or copy action fails, the extension shows common next steps for issues like missing `adb`, missing Android Emulator tools, Xcode command line tool problems, unsupported app files, or devices that are not running.
+- **Detailed Output Logs:** The **Mobile Emulator Manager** Output channel records actions, commands, and failure details for troubleshooting.
 
 ## Requirements
 
@@ -51,6 +52,7 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 - If iOS devices do not appear or fail to start, make sure Xcode is installed and `xcrun simctl` works from your terminal.
 - If app installation fails, select an `.apk` for Android and an `.ipa` containing a Simulator-installable `.app` for iOS Simulator.
 - If the device state looks stale, use the refresh button in the Devices view.
+- For detailed command output and failure details, open the **Mobile Emulator Manager** channel in the VS Code Output panel.
 
 ## License
 

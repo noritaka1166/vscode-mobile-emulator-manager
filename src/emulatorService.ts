@@ -13,6 +13,8 @@ export interface Emulator {
 }
 
 export class EmulatorService {
+    constructor(private readonly log?: (message: string) => void) {}
+
     private getAdbCommand(): string {
         const configuredOrEnvSdkPath = this.getConfiguredAndroidSdkPath() || process.env.ANDROID_HOME?.trim();
         if (configuredOrEnvSdkPath) {
@@ -159,11 +161,15 @@ export class EmulatorService {
     }
 
     private executeCommand(command: string): Promise<string> {
+        this.log?.(`$ ${command}`);
         return new Promise((resolve, reject) => {
             exec(command, (error, stdout, stderr) => {
                 if (error) {
-                    reject(new Error(stderr.trim() || error.message));
+                    const message = stderr.trim() || error.message;
+                    this.log?.(`Command failed: ${message}`);
+                    reject(new Error(message));
                 } else {
+                    this.logOutput(stdout);
                     resolve(stdout);
                 }
             });
@@ -171,15 +177,33 @@ export class EmulatorService {
     }
 
     private executeFile(command: string, args: string[]): Promise<string> {
+        this.log?.(`$ ${[command, ...args].map(arg => this.formatCommandArg(arg)).join(' ')}`);
         return new Promise((resolve, reject) => {
             execFile(command, args, (error, stdout, stderr) => {
                 if (error) {
-                    reject(new Error(stderr.trim() || error.message));
+                    const message = stderr.trim() || error.message;
+                    this.log?.(`Command failed: ${message}`);
+                    reject(new Error(message));
                 } else {
+                    this.logOutput(stdout);
                     resolve(stdout);
                 }
             });
         });
+    }
+
+    private formatCommandArg(arg: string): string {
+        return /[\s"'\\]/.test(arg) ? JSON.stringify(arg) : arg;
+    }
+
+    private logOutput(output: string): void {
+        const trimmedOutput = output.trim();
+        if (!trimmedOutput) {
+            return;
+        }
+
+        const maxLength = 4000;
+        this.log?.(trimmedOutput.length > maxLength ? `${trimmedOutput.slice(0, maxLength)}...` : trimmedOutput);
     }
 
     private async getIosEmulators(): Promise<Emulator[]> {
@@ -214,6 +238,7 @@ export class EmulatorService {
             }
             return emulators;
         } catch (error) {
+            this.log?.(`Failed to fetch iOS emulators: ${error instanceof Error ? error.message : String(error)}`);
             console.error('Failed to fetch iOS emulators', error);
             return [];
         }
@@ -271,6 +296,7 @@ export class EmulatorService {
                 };
             });
         } catch (error) {
+            this.log?.(`Failed to fetch Android emulators: ${error instanceof Error ? error.message : String(error)}`);
             console.error('Failed to fetch Android emulators', error);
             return [];
         }
@@ -284,6 +310,7 @@ export class EmulatorService {
             const androidHome = this.getAndroidSdkPath();
             const emulatorCommand = path.join(androidHome, 'emulator', 'emulator');
             const { spawn } = require('node:child_process');
+            this.log?.(`$ ${this.formatCommandArg(emulatorCommand)} -avd ${this.formatCommandArg(emulator.id)}`);
             const child = spawn(emulatorCommand, ['-avd', emulator.id], {
                 detached: true,
                 stdio: 'ignore'
