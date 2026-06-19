@@ -1,4 +1,4 @@
-import { exec, execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
@@ -132,13 +132,13 @@ export class EmulatorService {
     private async isAndroidEmulatorRunning(avdName: string): Promise<boolean> {
         const adbCommand = this.getAdbCommand();
         try {
-            const adbOutput = await this.executeCommand(`"${adbCommand}" devices`);
+            const adbOutput = await this.executeFile(adbCommand, ['devices']);
             const lines = adbOutput.split('\n');
             for (const line of lines) {
                 if (line.startsWith('emulator-') && line.includes('device')) {
                     const serial = line.split('\t')[0];
                     try {
-                        const avdNameOut = await this.executeCommand(`"${adbCommand}" -s ${serial} emu avd name`);
+                        const avdNameOut = await this.executeFile(adbCommand, ['-s', serial, 'emu', 'avd', 'name']);
                         const avdNameLines = avdNameOut.split('\n');
                         if (avdNameLines.length > 0 && avdNameLines[0].trim() === avdName) {
                             return true;
@@ -158,22 +158,6 @@ export class EmulatorService {
         const iosEmulators = await this.getIosEmulators();
         const androidEmulators = await this.getAndroidEmulators();
         return [...iosEmulators, ...androidEmulators];
-    }
-
-    private executeCommand(command: string): Promise<string> {
-        this.log?.(`$ ${command}`);
-        return new Promise((resolve, reject) => {
-            exec(command, (error, stdout, stderr) => {
-                if (error) {
-                    const message = stderr.trim() || error.message;
-                    this.log?.(`Command failed: ${message}`);
-                    reject(new Error(message));
-                } else {
-                    this.logOutput(stdout);
-                    resolve(stdout);
-                }
-            });
-        });
     }
 
     private executeFile(command: string, args: string[]): Promise<string> {
@@ -208,7 +192,7 @@ export class EmulatorService {
 
     private async getIosEmulators(): Promise<Emulator[]> {
         try {
-            const output = await this.executeCommand('xcrun simctl list devices available --json');
+            const output = await this.executeFile('xcrun', ['simctl', 'list', 'devices', 'available', '--json']);
             const data = JSON.parse(output);
             const emulators: Emulator[] = [];
             
@@ -249,19 +233,19 @@ export class EmulatorService {
             const androidHome = this.getAndroidSdkPath();
             const emulatorCommand = path.join(androidHome, 'emulator', 'emulator');
             
-            const output = await this.executeCommand(`"${emulatorCommand}" -list-avds`);
+            const output = await this.executeFile(emulatorCommand, ['-list-avds']);
             const avds = output.split('\n').map(l => l.trim()).filter(l => l.length > 0);
             
             const adbCommand = this.getAdbCommand();
             let runningEmuNames: string[] = [];
             try {
-                const adbOutput = await this.executeCommand(`"${adbCommand}" devices`);
+                const adbOutput = await this.executeFile(adbCommand, ['devices']);
                 const lines = adbOutput.split('\n');
                 for (const line of lines) {
                     if (line.startsWith('emulator-') && line.includes('device')) {
                         const serial = line.split('\t')[0];
                         try {
-                            const avdNameOut = await this.executeCommand(`"${adbCommand}" -s ${serial} emu avd name`);
+                            const avdNameOut = await this.executeFile(adbCommand, ['-s', serial, 'emu', 'avd', 'name']);
                             const avdNameLines = avdNameOut.split('\n');
                             if (avdNameLines.length > 0) {
                                 runningEmuNames.push(avdNameLines[0].trim());
@@ -304,12 +288,11 @@ export class EmulatorService {
 
     public async startEmulator(emulator: Emulator): Promise<void> {
         if (emulator.os === 'iOS') {
-            await this.executeCommand(`xcrun simctl boot ${emulator.id}`);
-            await this.executeCommand(`open -a Simulator`);
+            await this.executeFile('xcrun', ['simctl', 'boot', emulator.id]);
+            await this.executeFile('open', ['-a', 'Simulator']);
         } else {
             const androidHome = this.getAndroidSdkPath();
             const emulatorCommand = path.join(androidHome, 'emulator', 'emulator');
-            const { spawn } = require('node:child_process');
             this.log?.(`$ ${this.formatCommandArg(emulatorCommand)} -avd ${this.formatCommandArg(emulator.id)}`);
             const child = spawn(emulatorCommand, ['-avd', emulator.id], {
                 detached: true,
@@ -331,7 +314,7 @@ export class EmulatorService {
 
     public async stopEmulator(emulator: Emulator): Promise<void> {
         if (emulator.os === 'iOS') {
-            await this.executeCommand(`xcrun simctl shutdown ${emulator.id}`);
+            await this.executeFile('xcrun', ['simctl', 'shutdown', emulator.id]);
         } else {
             const serial = await this.getRunningAndroidSerial(emulator.id);
             if (serial) {
@@ -387,13 +370,13 @@ export class EmulatorService {
 
     public async getRunningAndroidSerial(avdName: string): Promise<string | undefined> {
         const adbCommand = this.getAdbCommand();
-        const adbOutput = await this.executeCommand(`"${adbCommand}" devices`);
+        const adbOutput = await this.executeFile(adbCommand, ['devices']);
         const lines = adbOutput.split('\n');
         for (const line of lines) {
             if (line.startsWith('emulator-') && line.includes('device')) {
                 const serial = line.split('\t')[0];
                 try {
-                    const avdNameOut = await this.executeCommand(`"${adbCommand}" -s ${serial} emu avd name`);
+                    const avdNameOut = await this.executeFile(adbCommand, ['-s', serial, 'emu', 'avd', 'name']);
                     const avdNameLines = avdNameOut.split('\n');
                     if (avdNameLines.length > 0 && avdNameLines[0].trim() === avdName) {
                         return serial;
