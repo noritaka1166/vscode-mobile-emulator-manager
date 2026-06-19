@@ -32,8 +32,34 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
+            const selectedOs = await vscode.window.showQuickPick(
+                [
+                    {
+                        label: 'Android',
+                        description: `${stoppedEmulators.filter(emulator => emulator.os === 'Android').length} stopped`
+                    },
+                    {
+                        label: 'iOS',
+                        description: `${stoppedEmulators.filter(emulator => emulator.os === 'iOS').length} stopped`
+                    }
+                ],
+                {
+                    placeHolder: 'Select a platform'
+                }
+            );
+
+            if (!selectedOs) {
+                return;
+            }
+
+            const platformEmulators = stoppedEmulators.filter(emulator => emulator.os === selectedOs.label);
+            if (platformEmulators.length === 0) {
+                vscode.window.showInformationMessage(`No stopped ${selectedOs.label} devices are available to start.`);
+                return;
+            }
+
             const selected = await vscode.window.showQuickPick(
-                stoppedEmulators.map(emulator => ({
+                platformEmulators.map(emulator => ({
                     label: emulator.name,
                     description: emulator.osVersion || emulator.os,
                     detail: `${emulator.os} • ${emulator.id}`,
@@ -42,7 +68,7 @@ export function activate(context: vscode.ExtensionContext) {
                 {
                     matchOnDescription: true,
                     matchOnDetail: true,
-                    placeHolder: 'Select a device to start'
+                    placeHolder: `Select a ${selectedOs.label} device to start`
                 }
             );
 
