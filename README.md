@@ -1,5 +1,7 @@
 # Mobile Emulator Manager
 
+[日本語版 README](README.ja.md)
+
 Manage and control your iOS Simulators and Android Emulators directly from the VS Code sidebar!
 
 ## Features
