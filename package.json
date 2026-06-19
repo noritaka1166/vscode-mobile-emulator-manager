@@ -69,7 +69,7 @@
       {
         "command": "emulators.start",
         "title": "Start",
-        "icon": "$(play)"
+        "icon": "$(debug-start)"
       },
       {
         "command": "emulators.quickStart",
@@ -84,12 +84,15 @@
       {
         "command": "emulators.stop",
         "title": "Stop",
-        "icon": "$(stop)"
+        "icon": {
+          "light": "assets/stop-red.svg",
+          "dark": "assets/stop-red.svg"
+        }
       },
       {
         "command": "emulators.installApp",
         "title": "Install App...",
-        "icon": "$(cloud-upload)"
+        "icon": "$(package)"
       },
       {
         "command": "emulators.installLastApp",
@@ -99,7 +102,7 @@
       {
         "command": "emulators.startAndInstallApp",
         "title": "Start and Install App...",
-        "icon": "$(run-all)"
+        "icon": "$(rocket)"
       },
       {
         "command": "emulators.copyId",
@@ -122,27 +125,27 @@
         {
           "command": "emulators.start",
           "when": "view == emulatorsView && viewItem =~ /stopped$/",
-          "group": "inline"
+          "group": "inline@1"
         },
         {
           "command": "emulators.startAndInstallApp",
           "when": "view == emulatorsView && viewItem =~ /stopped$/",
-          "group": "inline"
+          "group": "inline@2"
         },
         {
           "command": "emulators.stop",
           "when": "view == emulatorsView && viewItem =~ /running$/",
-          "group": "inline"
+          "group": "inline@1"
         },
         {
           "command": "emulators.installApp",
           "when": "view == emulatorsView && viewItem =~ /running$/",
-          "group": "inline"
+          "group": "inline@2"
         },
         {
           "command": "emulators.installLastApp",
           "when": "view == emulatorsView && viewItem =~ /running$/",
-          "group": "inline"
+          "group": "inline@3"
         },
         {
           "command": "emulators.copyId",

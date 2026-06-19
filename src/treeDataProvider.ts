@@ -66,9 +66,9 @@ export class EmulatorTreeItem extends vscode.TreeItem {
             this.description = desc;
             
             if (emulator.state === 'running') {
-                this.iconPath = new vscode.ThemeIcon('play-circle', new vscode.ThemeColor('testing.iconPassed'));
+                this.iconPath = new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('testing.iconPassed'));
             } else {
-                this.iconPath = new vscode.ThemeIcon('debug-stop', new vscode.ThemeColor('testing.iconFailed'));
+                this.iconPath = new vscode.ThemeIcon('circle-large-outline', new vscode.ThemeColor('disabledForeground'));
             }
         } else if (type === 'osVersion') {
             this.iconPath = new vscode.ThemeIcon('versions');
