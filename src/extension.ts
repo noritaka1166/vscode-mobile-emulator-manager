@@ -50,6 +50,14 @@ export function activate(context: vscode.ExtensionContext) {
 
             await startAndInstallAppWithProgress(emulator, appUri.fsPath, emulatorService, treeDataProvider, context, outputChannel);
         }),
+        vscode.commands.registerCommand('emulators.quickInstallLastApp', async () => {
+            const emulator = await selectRunningEmulator(emulatorService, 'install last app to', outputChannel);
+            if (!emulator) {
+                return;
+            }
+
+            await installLastAppWithProgress(emulator, emulatorService, context, outputChannel);
+        }),
         vscode.commands.registerCommand('emulators.stop', async (node: EmulatorTreeItem) => {
             if (node?.emulator) {
                 vscode.window.showInformationMessage(`Stopping ${node.emulator.name}...`);
@@ -98,37 +106,7 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            const emulator = node.emulator;
-            const appPath = getLastAppPath(context, emulator.os);
-            if (!appPath) {
-                logOutput(outputChannel, `No recent ${getAppFileExtension(emulator.os)} file found for ${emulator.os}.`);
-                vscode.window.showInformationMessage(`No recent ${getAppFileExtension(emulator.os)} file found for ${emulator.os}. Use Install App... first.`);
-                return;
-            }
-
-            try {
-                await vscode.workspace.fs.stat(vscode.Uri.file(appPath));
-            } catch {
-                logOutput(outputChannel, `Last ${emulator.os} app file no longer exists: ${appPath}`);
-                vscode.window.showWarningMessage(`The last ${emulator.os} app file no longer exists: ${appPath}`);
-                return;
-            }
-
-            await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: `Installing ${getFileName(appPath)} to ${emulator.name}...`,
-                cancellable: false
-            }, async () => {
-                logOutput(outputChannel, `Installing last app ${appPath} to ${formatEmulator(emulator)}.`);
-                try {
-                    await emulatorService.installApp(emulator, appPath);
-                    logOutput(outputChannel, `Installed last app ${appPath} to ${formatEmulator(emulator)} successfully.`);
-                    vscode.window.showInformationMessage(`Installed ${getFileName(appPath)} to ${emulator.name} successfully.`);
-                } catch (e: any) {
-                    logOutput(outputChannel, getGuidedErrorMessage(`Failed to install last app to ${emulator.name}`, e));
-                    vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to install last app to ${emulator.name}`, e));
-                }
-            });
+            await installLastAppWithProgress(node.emulator, emulatorService, context, outputChannel);
         }),
         vscode.commands.registerCommand('emulators.startAndInstallApp', async (node: EmulatorTreeItem) => {
             if (!node?.emulator) {
@@ -249,6 +227,72 @@ async function selectStoppedEmulator(
     return selected?.emulator;
 }
 
+async function selectRunningEmulator(
+    emulatorService: EmulatorService,
+    actionLabel: string,
+    outputChannel: vscode.OutputChannel
+): Promise<Emulator | undefined> {
+    logOutput(outputChannel, `Loading devices to ${actionLabel}.`);
+    let emulators: Emulator[];
+    try {
+        emulators = await emulatorService.getEmulators();
+    } catch (e: any) {
+        logOutput(outputChannel, getGuidedErrorMessage('Failed to load devices', e));
+        vscode.window.showErrorMessage(getGuidedErrorMessage('Failed to load devices', e));
+        return undefined;
+    }
+
+    const runningEmulators = emulators.filter(emulator => emulator.state === 'running');
+    if (runningEmulators.length === 0) {
+        logOutput(outputChannel, 'No running devices are available.');
+        vscode.window.showInformationMessage('No running devices are available.');
+        return undefined;
+    }
+
+    const selectedOs = await vscode.window.showQuickPick(
+        [
+            {
+                label: 'Android',
+                description: `${runningEmulators.filter(emulator => emulator.os === 'Android').length} running`
+            },
+            {
+                label: 'iOS',
+                description: `${runningEmulators.filter(emulator => emulator.os === 'iOS').length} running`
+            }
+        ],
+        {
+            placeHolder: 'Select a platform'
+        }
+    );
+
+    if (!selectedOs) {
+        return undefined;
+    }
+
+    const platformEmulators = runningEmulators.filter(emulator => emulator.os === selectedOs.label);
+    if (platformEmulators.length === 0) {
+        logOutput(outputChannel, `No running ${selectedOs.label} devices are available.`);
+        vscode.window.showInformationMessage(`No running ${selectedOs.label} devices are available.`);
+        return undefined;
+    }
+
+    const selected = await vscode.window.showQuickPick(
+        platformEmulators.map(emulator => ({
+            label: emulator.name,
+            description: emulator.osVersion || emulator.os,
+            detail: `${emulator.os} • ${emulator.id}`,
+            emulator
+        })),
+        {
+            matchOnDescription: true,
+            matchOnDetail: true,
+            placeHolder: `Select a ${selectedOs.label} device to ${actionLabel}`
+        }
+    );
+
+    return selected?.emulator;
+}
+
 function getLastAppPath(context: vscode.ExtensionContext, os: 'iOS' | 'Android'): string | undefined {
     return context.globalState.get<string>(getLastAppPathKey(os));
 }
@@ -317,6 +361,44 @@ async function startAndInstallAppWithProgress(
         } catch (e: any) {
             logOutput(outputChannel, getGuidedErrorMessage(`Failed to start and install app to ${emulator.name}`, e));
             vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to start and install app to ${emulator.name}`, e));
+        }
+    });
+}
+
+async function installLastAppWithProgress(
+    emulator: Emulator,
+    emulatorService: EmulatorService,
+    context: vscode.ExtensionContext,
+    outputChannel: vscode.OutputChannel
+): Promise<void> {
+    const appPath = getLastAppPath(context, emulator.os);
+    if (!appPath) {
+        logOutput(outputChannel, `No recent ${getAppFileExtension(emulator.os)} file found for ${emulator.os}.`);
+        vscode.window.showInformationMessage(`No recent ${getAppFileExtension(emulator.os)} file found for ${emulator.os}. Use Install App... first.`);
+        return;
+    }
+
+    try {
+        await vscode.workspace.fs.stat(vscode.Uri.file(appPath));
+    } catch {
+        logOutput(outputChannel, `Last ${emulator.os} app file no longer exists: ${appPath}`);
+        vscode.window.showWarningMessage(`The last ${emulator.os} app file no longer exists: ${appPath}`);
+        return;
+    }
+
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Installing ${getFileName(appPath)} to ${emulator.name}...`,
+        cancellable: false
+    }, async () => {
+        logOutput(outputChannel, `Installing last app ${appPath} to ${formatEmulator(emulator)}.`);
+        try {
+            await emulatorService.installApp(emulator, appPath);
+            logOutput(outputChannel, `Installed last app ${appPath} to ${formatEmulator(emulator)} successfully.`);
+            vscode.window.showInformationMessage(`Installed ${getFileName(appPath)} to ${emulator.name} successfully.`);
+        } catch (e: any) {
+            logOutput(outputChannel, getGuidedErrorMessage(`Failed to install last app to ${emulator.name}`, e));
+            vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to install last app to ${emulator.name}`, e));
         }
     });
 }

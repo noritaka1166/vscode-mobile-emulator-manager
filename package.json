@@ -101,6 +101,11 @@
         "icon": "$(run-all)"
       },
       {
+        "command": "emulators.quickInstallLastApp",
+        "title": "Mobile Emulator Manager: Install Last App...",
+        "icon": "$(history)"
+      },
+      {
         "command": "emulators.stop",
         "title": "Stop",
         "icon": {

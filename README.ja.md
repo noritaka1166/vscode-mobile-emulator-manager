@@ -14,6 +14,7 @@ VS Codeのサイドバーから、iOS SimulatorとAndroid Emulatorを一覧表�
 - **端末の停止:** 実行中のSimulator / Emulatorをサイドバーから停止できます。
 - **アプリのインストール:** 実行中のAndroid EmulatorまたはiOS Simulatorを右クリックし、`.apk` または `.ipa` を選んでインストールできます。
 - **最後に使ったアプリの再インストール:** プラットフォームごとに最後にインストールした `.apk` または `.ipa` を、ファイル選択なしで再インストールできます。
+- **コマンドパレットから最後のアプリを再インストール:** **Mobile Emulator Manager: Install Last App...** を実行すると、実行中の端末を選び、最後に使ったアプリを再インストールできます。
 - **起動してインストール:** 停止中の端末を右クリックし、アプリファイルを選ぶと、端末を起動してから自動でインストールします。
 - **UDIDコピー (iOS):** iOS Simulatorを右クリックしてUDIDをクリップボードへコピーできます。
 - **ADB Serialコピー (Android):** 実行中のAndroid Emulatorを右クリックして、`emulator-5554` のようなADB serialをコピーできます。
@@ -39,11 +40,12 @@ VS Codeのサイドバーから、iOS SimulatorとAndroid Emulatorを一覧表�
 3. 端末横の **Play** または **Stop** ボタンで起動・停止します。
 4. コマンドパレットから **Mobile Emulator Manager: Start Device...** を実行し、Android / iOSを選んでから、Quick Pickで停止中の端末を起動できます。
 5. コマンドパレットから **Mobile Emulator Manager: Start and Install App...** を実行すると、停止中の端末を選び、起動後にアプリをインストールできます。
-6. 実行中の端末を右クリックし、**Install App...** を選んで `.apk` または `.ipa` をインストールします。
-7. 実行中の端末を右クリックし、**Install Last App** を選ぶと、そのプラットフォームで最後に使ったアプリを再インストールできます。
-8. 停止中の端末を右クリックし、**Start and Install App...** を選ぶと、起動からインストールまでまとめて実行できます。
-9. iOS Simulatorでは **Copy UDID** で端末IDをコピーできます。
-10. 実行中のAndroid Emulatorでは **Copy ADB Serial** でADB serialをコピーできます。
+6. コマンドパレットから **Mobile Emulator Manager: Install Last App...** を実行すると、実行中の端末を選び、そのプラットフォームで最後に使ったアプリを再インストールできます。
+7. 実行中の端末を右クリックし、**Install App...** を選んで `.apk` または `.ipa` をインストールします。
+8. 実行中の端末を右クリックし、**Install Last App** を選ぶと、そのプラットフォームで最後に使ったアプリを再インストールできます。
+9. 停止中の端末を右クリックし、**Start and Install App...** を選ぶと、起動からインストールまでまとめて実行できます。
+10. iOS Simulatorでは **Copy UDID** で端末IDをコピーできます。
+11. 実行中のAndroid Emulatorでは **Copy ADB Serial** でADB serialをコピーできます。
 
 ## トラブルシューティング
 
