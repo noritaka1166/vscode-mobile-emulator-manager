@@ -9,11 +9,17 @@ export function activate(context: vscode.ExtensionContext) {
     const outputChannel = vscode.window.createOutputChannel('Mobile Emulator Manager');
     const emulatorService = new EmulatorService(message => logOutput(outputChannel, message));
     const treeDataProvider = new EmulatorTreeDataProvider(emulatorService);
-    
-    vscode.window.registerTreeDataProvider('emulatorsView', treeDataProvider);
+    const treeView = vscode.window.createTreeView('emulatorsView', { treeDataProvider });
 
     context.subscriptions.push(
         outputChannel,
+        treeView,
+        treeView.onDidChangeVisibility(event => {
+            if (event.visible) {
+                logOutput(outputChannel, 'Devices view became visible. Refreshing device tree.');
+                treeDataProvider.refresh();
+            }
+        }),
         vscode.commands.registerCommand('emulators.refresh', () => {
             logOutput(outputChannel, 'Refreshing device tree.');
             treeDataProvider.refresh();
