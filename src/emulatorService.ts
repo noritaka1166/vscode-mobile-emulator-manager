@@ -82,29 +82,31 @@ export class EmulatorService {
         return mapping[apiLevel] ? `${mapping[apiLevel]} (API ${apiLevel})` : `API ${apiLevel}`;
     }
 
-    private getAndroidAvdConfigPath(avdName: string): string | undefined {
+    private getAndroidAvdConfigContent(avdName: string): string | undefined {
         const avdRoot = path.join(os.homedir(), '.android', 'avd');
+        const metadataPath = path.join(avdRoot, `${avdName}.ini`);
+        let metadata: string | undefined;
+
+        if (fs.existsSync(metadataPath)) {
+            metadata = fs.readFileSync(metadataPath, 'utf-8');
+            const absoluteAvdPath = this.getIniValue(metadata, 'path');
+            const relativeAvdPath = this.getIniValue(metadata, 'path.rel');
+            const avdPath = absoluteAvdPath || relativeAvdPath;
+            if (avdPath) {
+                const resolvedAvdPath = path.isAbsolute(avdPath) ? avdPath : path.join(os.homedir(), '.android', avdPath);
+                const configPath = path.join(resolvedAvdPath, 'config.ini');
+                if (fs.existsSync(configPath)) {
+                    return `${metadata}\n${fs.readFileSync(configPath, 'utf-8')}`;
+                }
+            }
+        }
+
         const directConfigPath = path.join(avdRoot, `${avdName}.avd`, 'config.ini');
         if (fs.existsSync(directConfigPath)) {
-            return directConfigPath;
+            return fs.readFileSync(directConfigPath, 'utf-8');
         }
 
-        const metadataPath = path.join(avdRoot, `${avdName}.ini`);
-        if (!fs.existsSync(metadataPath)) {
-            return undefined;
-        }
-
-        const metadata = fs.readFileSync(metadataPath, 'utf-8');
-        const absoluteAvdPath = this.getIniValue(metadata, 'path');
-        const relativeAvdPath = this.getIniValue(metadata, 'path.rel');
-        const avdPath = absoluteAvdPath || relativeAvdPath;
-        if (!avdPath) {
-            return undefined;
-        }
-
-        const resolvedAvdPath = path.isAbsolute(avdPath) ? avdPath : path.join(os.homedir(), '.android', avdPath);
-        const configPath = path.join(resolvedAvdPath, 'config.ini');
-        return fs.existsSync(configPath) ? configPath : undefined;
+        return metadata;
     }
 
     private getIniValue(content: string, key: string): string | undefined {
@@ -262,9 +264,8 @@ export class EmulatorService {
             return avds.map(avd => {
                 let osVersion = 'Unknown';
                 try {
-                    const iniPath = this.getAndroidAvdConfigPath(avd);
-                    if (iniPath && fs.existsSync(iniPath)) {
-                        const content = fs.readFileSync(iniPath, 'utf-8');
+                    const content = this.getAndroidAvdConfigContent(avd);
+                    if (content) {
                         osVersion = this.getAndroidOsVersionFromConfig(content);
                     }
                 } catch (e) {
