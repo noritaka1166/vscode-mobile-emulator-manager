@@ -36,19 +36,6 @@
     "android",
     "mobile"
   ],
-  "activationEvents": [
-    "onView:emulatorsView",
-    "onCommand:emulators.refresh",
-    "onCommand:emulators.start",
-    "onCommand:emulators.quickStart",
-    "onCommand:emulators.quickStartAndInstallApp",
-    "onCommand:emulators.stop",
-    "onCommand:emulators.installApp",
-    "onCommand:emulators.installLastApp",
-    "onCommand:emulators.startAndInstallApp",
-    "onCommand:emulators.copyId",
-    "onCommand:emulators.copyAndroidSerial"
-  ],
   "main": "./out/extension.js",
   "contributes": {
     "configuration": {
