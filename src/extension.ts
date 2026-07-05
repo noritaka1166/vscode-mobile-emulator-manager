@@ -5,7 +5,9 @@ import { EmulatorTreeDataProvider, EmulatorTreeItem } from './treeDataProvider';
 const LAST_ANDROID_APP_PATH_KEY = 'lastAndroidAppPath';
 const LAST_IOS_APP_PATH_KEY = 'lastIosAppPath';
 
-export function activate(context: vscode.ExtensionContext) {
+type EmulatorState = Emulator['state'];
+
+export function activate(context: vscode.ExtensionContext): void {
     const outputChannel = vscode.window.createOutputChannel('Mobile Emulator Manager');
     const emulatorService = new EmulatorService(message => logOutput(outputChannel, message));
     const treeDataProvider = new EmulatorTreeDataProvider(emulatorService);
@@ -30,7 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }),
         vscode.commands.registerCommand('emulators.quickStart', async () => {
-            const emulator = await selectStoppedEmulator(emulatorService, 'start', outputChannel);
+            const emulator = await selectEmulatorByState(emulatorService, 'stopped', 'start', outputChannel);
             if (!emulator) {
                 return;
             }
@@ -38,7 +40,7 @@ export function activate(context: vscode.ExtensionContext) {
             await startEmulatorWithProgress(emulator, emulatorService, treeDataProvider, outputChannel);
         }),
         vscode.commands.registerCommand('emulators.quickStartAndInstallApp', async () => {
-            const emulator = await selectStoppedEmulator(emulatorService, 'start and install to', outputChannel);
+            const emulator = await selectEmulatorByState(emulatorService, 'stopped', 'start and install to', outputChannel);
             if (!emulator) {
                 return;
             }
@@ -51,7 +53,7 @@ export function activate(context: vscode.ExtensionContext) {
             await startAndInstallAppWithProgress(emulator, appUri.fsPath, emulatorService, treeDataProvider, context, outputChannel);
         }),
         vscode.commands.registerCommand('emulators.quickInstallLastApp', async () => {
-            const emulator = await selectRunningEmulator(emulatorService, 'install last app to', outputChannel);
+            const emulator = await selectEmulatorByState(emulatorService, 'running', 'install last app to', outputChannel);
             if (!emulator) {
                 return;
             }
@@ -60,16 +62,15 @@ export function activate(context: vscode.ExtensionContext) {
         }),
         vscode.commands.registerCommand('emulators.stop', async (node: EmulatorTreeItem) => {
             if (node?.emulator) {
-                vscode.window.showInformationMessage(`Stopping ${node.emulator.name}...`);
+                showInformationMessage(`Stopping ${node.emulator.name}...`);
                 logOutput(outputChannel, `Stopping ${formatEmulator(node.emulator)}.`);
                 try {
                     await emulatorService.stopEmulator(node.emulator);
                     logOutput(outputChannel, `Stopped ${formatEmulator(node.emulator)} successfully.`);
-                    vscode.window.showInformationMessage(`Stopped ${node.emulator.name} successfully.`);
+                    showInformationMessage(`Stopped ${node.emulator.name} successfully.`);
                     treeDataProvider.refresh();
-                } catch (e: any) {
-                    logOutput(outputChannel, getGuidedErrorMessage(`Failed to stop ${node.emulator.name}`, e));
-                    vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to stop ${node.emulator.name}`, e));
+                } catch (error: unknown) {
+                    reportError(outputChannel, `Failed to stop ${node.emulator.name}`, error);
                 }
             }
         }),
@@ -86,7 +87,7 @@ export function activate(context: vscode.ExtensionContext) {
 
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: `Installing ${appUri.fsPath.split(/[\\/]/).pop()} to ${emulator.name}...`,
+                title: `Installing ${getFileName(appUri.fsPath)} to ${emulator.name}...`,
                 cancellable: false
             }, async () => {
                 logOutput(outputChannel, `Installing ${appUri.fsPath} to ${formatEmulator(emulator)}.`);
@@ -94,10 +95,9 @@ export function activate(context: vscode.ExtensionContext) {
                     await emulatorService.installApp(emulator, appUri.fsPath);
                     await saveLastAppPath(context, emulator.os, appUri.fsPath);
                     logOutput(outputChannel, `Installed ${appUri.fsPath} to ${formatEmulator(emulator)} successfully.`);
-                    vscode.window.showInformationMessage(`Installed app to ${emulator.name} successfully.`);
-                } catch (e: any) {
-                    logOutput(outputChannel, getGuidedErrorMessage(`Failed to install app to ${emulator.name}`, e));
-                    vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to install app to ${emulator.name}`, e));
+                    showInformationMessage(`Installed app to ${emulator.name} successfully.`);
+                } catch (error: unknown) {
+                    reportError(outputChannel, `Failed to install app to ${emulator.name}`, error);
                 }
             });
         }),
@@ -125,7 +125,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (node?.emulator) {
                 await vscode.env.clipboard.writeText(node.emulator.id);
                 logOutput(outputChannel, `Copied UDID for ${formatEmulator(node.emulator)}: ${node.emulator.id}`);
-                vscode.window.showInformationMessage(`Copied UDID: ${node.emulator.id}`);
+                showInformationMessage(`Copied UDID: ${node.emulator.id}`);
             }
         }),
         vscode.commands.registerCommand('emulators.copyAndroidSerial', async (node: EmulatorTreeItem) => {
@@ -138,16 +138,15 @@ export function activate(context: vscode.ExtensionContext) {
                 const serial = await emulatorService.getRunningAndroidSerial(node.emulator.id);
                 if (!serial) {
                     logOutput(outputChannel, `ADB serial could not be found for ${formatEmulator(node.emulator)}.`);
-                    vscode.window.showWarningMessage(`${node.emulator.name} is not running or its ADB serial could not be found.`);
+                    showWarningMessage(`${node.emulator.name} is not running or its ADB serial could not be found.`);
                     return;
                 }
 
                 await vscode.env.clipboard.writeText(serial);
                 logOutput(outputChannel, `Copied ADB serial for ${formatEmulator(node.emulator)}: ${serial}`);
-                vscode.window.showInformationMessage(`Copied ADB serial: ${serial}`);
-            } catch (e: any) {
-                logOutput(outputChannel, getGuidedErrorMessage(`Failed to copy ADB serial for ${node.emulator.name}`, e));
-                vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to copy ADB serial for ${node.emulator.name}`, e));
+                showInformationMessage(`Copied ADB serial: ${serial}`);
+            } catch (error: unknown) {
+                reportError(outputChannel, `Failed to copy ADB serial for ${node.emulator.name}`, error);
             }
         })
     );
@@ -161,8 +160,9 @@ function formatEmulator(emulator: Emulator): string {
     return `${emulator.name} (${emulator.os}, ${emulator.id})`;
 }
 
-async function selectStoppedEmulator(
+async function selectEmulatorByState(
     emulatorService: EmulatorService,
+    state: EmulatorState,
     actionLabel: string,
     outputChannel: vscode.OutputChannel
 ): Promise<Emulator | undefined> {
@@ -170,16 +170,15 @@ async function selectStoppedEmulator(
     let emulators: Emulator[];
     try {
         emulators = await emulatorService.getEmulators();
-    } catch (e: any) {
-        logOutput(outputChannel, getGuidedErrorMessage('Failed to load devices', e));
-        vscode.window.showErrorMessage(getGuidedErrorMessage('Failed to load devices', e));
+    } catch (error: unknown) {
+        reportError(outputChannel, 'Failed to load devices', error);
         return undefined;
     }
 
-    const stoppedEmulators = emulators.filter(emulator => emulator.state === 'stopped');
-    if (stoppedEmulators.length === 0) {
-        logOutput(outputChannel, 'No stopped devices are available.');
-        vscode.window.showInformationMessage('No stopped devices are available.');
+    const stateEmulators = emulators.filter(emulator => emulator.state === state);
+    if (stateEmulators.length === 0) {
+        logOutput(outputChannel, `No ${state} devices are available.`);
+        showInformationMessage(`No ${state} devices are available.`);
         return undefined;
     }
 
@@ -187,11 +186,11 @@ async function selectStoppedEmulator(
         [
             {
                 label: 'Android',
-                description: `${stoppedEmulators.filter(emulator => emulator.os === 'Android').length} stopped`
+                description: `${stateEmulators.filter(emulator => emulator.os === 'Android').length} ${state}`
             },
             {
                 label: 'iOS',
-                description: `${stoppedEmulators.filter(emulator => emulator.os === 'iOS').length} stopped`
+                description: `${stateEmulators.filter(emulator => emulator.os === 'iOS').length} ${state}`
             }
         ],
         {
@@ -203,76 +202,10 @@ async function selectStoppedEmulator(
         return undefined;
     }
 
-    const platformEmulators = stoppedEmulators.filter(emulator => emulator.os === selectedOs.label);
+    const platformEmulators = stateEmulators.filter(emulator => emulator.os === selectedOs.label);
     if (platformEmulators.length === 0) {
-        logOutput(outputChannel, `No stopped ${selectedOs.label} devices are available.`);
-        vscode.window.showInformationMessage(`No stopped ${selectedOs.label} devices are available.`);
-        return undefined;
-    }
-
-    const selected = await vscode.window.showQuickPick(
-        platformEmulators.map(emulator => ({
-            label: emulator.name,
-            description: emulator.osVersion || emulator.os,
-            detail: `${emulator.os} • ${emulator.id}`,
-            emulator
-        })),
-        {
-            matchOnDescription: true,
-            matchOnDetail: true,
-            placeHolder: `Select a ${selectedOs.label} device to ${actionLabel}`
-        }
-    );
-
-    return selected?.emulator;
-}
-
-async function selectRunningEmulator(
-    emulatorService: EmulatorService,
-    actionLabel: string,
-    outputChannel: vscode.OutputChannel
-): Promise<Emulator | undefined> {
-    logOutput(outputChannel, `Loading devices to ${actionLabel}.`);
-    let emulators: Emulator[];
-    try {
-        emulators = await emulatorService.getEmulators();
-    } catch (e: any) {
-        logOutput(outputChannel, getGuidedErrorMessage('Failed to load devices', e));
-        vscode.window.showErrorMessage(getGuidedErrorMessage('Failed to load devices', e));
-        return undefined;
-    }
-
-    const runningEmulators = emulators.filter(emulator => emulator.state === 'running');
-    if (runningEmulators.length === 0) {
-        logOutput(outputChannel, 'No running devices are available.');
-        vscode.window.showInformationMessage('No running devices are available.');
-        return undefined;
-    }
-
-    const selectedOs = await vscode.window.showQuickPick(
-        [
-            {
-                label: 'Android',
-                description: `${runningEmulators.filter(emulator => emulator.os === 'Android').length} running`
-            },
-            {
-                label: 'iOS',
-                description: `${runningEmulators.filter(emulator => emulator.os === 'iOS').length} running`
-            }
-        ],
-        {
-            placeHolder: 'Select a platform'
-        }
-    );
-
-    if (!selectedOs) {
-        return undefined;
-    }
-
-    const platformEmulators = runningEmulators.filter(emulator => emulator.os === selectedOs.label);
-    if (platformEmulators.length === 0) {
-        logOutput(outputChannel, `No running ${selectedOs.label} devices are available.`);
-        vscode.window.showInformationMessage(`No running ${selectedOs.label} devices are available.`);
+        logOutput(outputChannel, `No ${state} ${selectedOs.label} devices are available.`);
+        showInformationMessage(`No ${state} ${selectedOs.label} devices are available.`);
         return undefined;
     }
 
@@ -328,11 +261,10 @@ async function startEmulatorWithProgress(
         try {
             await emulatorService.startEmulator(emulator);
             logOutput(outputChannel, `Started ${formatEmulator(emulator)} successfully.`);
-            vscode.window.showInformationMessage(`Started ${emulator.name} successfully.`);
+            showInformationMessage(`Started ${emulator.name} successfully.`);
             treeDataProvider.refresh();
-        } catch (e: any) {
-            logOutput(outputChannel, getGuidedErrorMessage(`Failed to start ${emulator.name}`, e));
-            vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to start ${emulator.name}`, e));
+        } catch (error: unknown) {
+            reportError(outputChannel, `Failed to start ${emulator.name}`, error);
         }
     });
 }
@@ -356,11 +288,10 @@ async function startAndInstallAppWithProgress(
             await emulatorService.installApp(emulator, appPath);
             await saveLastAppPath(context, emulator.os, appPath);
             logOutput(outputChannel, `Started ${formatEmulator(emulator)} and installed ${appPath} successfully.`);
-            vscode.window.showInformationMessage(`Started ${emulator.name} and installed app successfully.`);
+            showInformationMessage(`Started ${emulator.name} and installed app successfully.`);
             treeDataProvider.refresh();
-        } catch (e: any) {
-            logOutput(outputChannel, getGuidedErrorMessage(`Failed to start and install app to ${emulator.name}`, e));
-            vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to start and install app to ${emulator.name}`, e));
+        } catch (error: unknown) {
+            reportError(outputChannel, `Failed to start and install app to ${emulator.name}`, error);
         }
     });
 }
@@ -374,7 +305,7 @@ async function installLastAppWithProgress(
     const appPath = getLastAppPath(context, emulator.os);
     if (!appPath) {
         logOutput(outputChannel, `No recent ${getAppFileExtension(emulator.os)} file found for ${emulator.os}.`);
-        vscode.window.showInformationMessage(`No recent ${getAppFileExtension(emulator.os)} file found for ${emulator.os}. Use Install App... first.`);
+        showInformationMessage(`No recent ${getAppFileExtension(emulator.os)} file found for ${emulator.os}. Use Install App... first.`);
         return;
     }
 
@@ -382,7 +313,7 @@ async function installLastAppWithProgress(
         await vscode.workspace.fs.stat(vscode.Uri.file(appPath));
     } catch {
         logOutput(outputChannel, `Last ${emulator.os} app file no longer exists: ${appPath}`);
-        vscode.window.showWarningMessage(`The last ${emulator.os} app file no longer exists: ${appPath}`);
+        showWarningMessage(`The last ${emulator.os} app file no longer exists: ${appPath}`);
         return;
     }
 
@@ -395,10 +326,9 @@ async function installLastAppWithProgress(
         try {
             await emulatorService.installApp(emulator, appPath);
             logOutput(outputChannel, `Installed last app ${appPath} to ${formatEmulator(emulator)} successfully.`);
-            vscode.window.showInformationMessage(`Installed ${getFileName(appPath)} to ${emulator.name} successfully.`);
-        } catch (e: any) {
-            logOutput(outputChannel, getGuidedErrorMessage(`Failed to install last app to ${emulator.name}`, e));
-            vscode.window.showErrorMessage(getGuidedErrorMessage(`Failed to install last app to ${emulator.name}`, e));
+            showInformationMessage(`Installed ${getFileName(appPath)} to ${emulator.name} successfully.`);
+        } catch (error: unknown) {
+            reportError(outputChannel, `Failed to install last app to ${emulator.name}`, error);
         }
     });
 }
@@ -421,6 +351,20 @@ function getGuidedErrorMessage(prefix: string, error: unknown): string {
     const details = getErrorDetails(error);
     const guide = getCauseGuide(details);
     return guide ? `${prefix}: ${details} ${guide}` : `${prefix}: ${details}`;
+}
+
+function reportError(outputChannel: vscode.OutputChannel, prefix: string, error: unknown): void {
+    const message = getGuidedErrorMessage(prefix, error);
+    logOutput(outputChannel, message);
+    void vscode.window.showErrorMessage(message);
+}
+
+function showInformationMessage(message: string): void {
+    void vscode.window.showInformationMessage(message);
+}
+
+function showWarningMessage(message: string): void {
+    void vscode.window.showWarningMessage(message);
 }
 
 function getErrorDetails(error: unknown): string {
@@ -487,5 +431,3 @@ function getCauseGuide(details: string): string | undefined {
 function matchesAny(value: string, needles: string[]): boolean {
     return needles.some(needle => value.includes(needle));
 }
-
-export function deactivate() {}
