@@ -54,7 +54,7 @@
         {
           "id": "emulator-manager",
           "title": "Emulators",
-          "icon": "$(device-mobile)"
+          "icon": "assets/emulators.svg"
         }
       ]
     },
@@ -62,7 +62,8 @@
       "emulator-manager": [
         {
           "id": "emulatorsView",
-          "name": "Devices"
+          "name": "Devices",
+          "icon": "assets/emulators.svg"
         }
       ]
     },
