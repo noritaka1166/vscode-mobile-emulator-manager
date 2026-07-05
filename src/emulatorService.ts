@@ -130,8 +130,8 @@ export class EmulatorService {
     }
 
     private getIniValue(content: string, key: string): string | undefined {
-        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const match = new RegExp(`^${escapedKey}\\s*=\\s*(.+)$`, 'm').exec(content);
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+        const match = new RegExp(String.raw`^${escapedKey}\s*=\s*(.+)$`, 'm').exec(content);
         return match?.[1].trim();
     }
 

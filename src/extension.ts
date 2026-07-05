@@ -129,7 +129,7 @@ export function activate(context: vscode.ExtensionContext): void {
             }
         }),
         vscode.commands.registerCommand('emulators.copyAndroidSerial', async (node: EmulatorTreeItem) => {
-            if (!node?.emulator || node.emulator.os !== 'Android') {
+            if (!node?.emulator || node.emulator?.os !== 'Android') {
                 return;
             }
 
