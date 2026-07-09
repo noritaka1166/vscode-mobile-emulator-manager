@@ -1,7 +1,7 @@
 {
   "name": "mobile-emulator-manager",
-  "displayName": "Mobile Emulator Manager",
-  "description": "Manage iOS and Android Emulators from the sidebar",
+  "displayName": "Mobile Emulator Manager: iOS & Android",
+  "description": "Launch, stop, and manage Android Emulators and iOS Simulators in VS Code. Install APK/IPA apps, quick-start devices, and copy ADB serials or UDIDs.",
   "publisher": "noritaka1166",
   "version": "0.1.0",
   "repository": {
@@ -14,6 +14,11 @@
   "homepage": "https://github.com/noritaka1166/vscode-mobile-emulator-manager#readme",
   "license": "MIT",
   "icon": "icon.png",
+  "pricing": "Free",
+  "galleryBanner": {
+    "color": "#0B1242",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -27,14 +32,38 @@
     }
   },
   "categories": [
+    "Testing",
     "Other"
   ],
   "keywords": [
+    "android",
+    "android emulator",
+    "android studio",
+    "android sdk",
+    "avd",
+    "adb",
+    "apk",
+    "ios",
+    "ios simulator",
+    "xcode",
+    "simctl",
+    "ipa",
+    "mobile",
+    "mobile development",
     "emulator",
     "simulator",
-    "ios",
-    "android",
-    "mobile"
+    "device manager",
+    "emulator manager",
+    "flutter",
+    "react native",
+    "expo",
+    "ionic",
+    "capacitor",
+    "cordova",
+    "app testing",
+    "mobile testing",
+    "qa",
+    "developer tools"
   ],
   "main": "./out/extension.js",
   "contributes": {
