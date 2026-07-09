@@ -3,7 +3,7 @@
   "displayName": "Mobile Emulator Manager: iOS & Android",
   "description": "Launch, stop, and manage Android Emulators and iOS Simulators in VS Code. Install APK/IPA apps, quick-start devices, and copy ADB serials or UDIDs.",
   "publisher": "noritaka1166",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/noritaka1166/vscode-mobile-emulator-manager.git"

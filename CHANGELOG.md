@@ -2,6 +2,21 @@
 
 All notable changes to "Mobile Emulator Manager" will be documented in this file.
 
+## [0.2.0] - 2026-07-09
+
+### Changed
+- Improved Android emulator state detection by matching running AVD names with active ADB serials
+- Improved Android OS and API level detection from AVD metadata
+- Made Android AVD configuration parsing more tolerant of whitespace around values
+- Refined device selection and error logging for emulator operations
+- Replaced the Emulators activity bar icon with a dedicated SVG icon
+- Improved Marketplace discoverability with a clearer name, description, categories, keywords, and gallery metadata
+- Updated TypeScript from 6.0.3 to 7.0.2
+
+### Fixed
+- Fixed Android OS checks used when selecting and operating on emulators
+- Removed redundant activation events now generated automatically by VS Code
+
 ## [0.1.0] - 2026-06-20
 
 ### Added
