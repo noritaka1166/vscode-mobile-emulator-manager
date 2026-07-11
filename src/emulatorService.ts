@@ -25,6 +25,9 @@ const ANDROID_OS_VERSION_BY_API: Record<string, string> = {
 
 const SIM_RUNTIME_VERSION_PATTERN = /SimRuntime\.(.+?)-(\d+)-(\d+)/;
 const SIM_RUNTIME_FALLBACK_PATTERN = /SimRuntime\.(.+)$/;
+const ANDROID_DEVICE_DETECTION_TIMEOUT_MS = 60_000;
+const ANDROID_BOOT_COMPLETION_TIMEOUT_MS = 120_000;
+const STARTUP_POLL_INTERVAL_MS = 2_000;
 
 export interface Emulator {
     id: string; // uuid for iOS, name for Android
@@ -149,16 +152,6 @@ export class EmulatorService {
         }
 
         return 'Unknown';
-    }
-
-    private async isAndroidEmulatorRunning(avdName: string): Promise<boolean> {
-        try {
-            const runningDevices = await this.getRunningAndroidDevices();
-            return runningDevices.some(device => device.avdName === avdName);
-        } catch (error) {
-            this.logError('Failed to check whether Android emulator is running', error);
-            return false;
-        }
     }
 
     public async getEmulators(): Promise<Emulator[]> {
@@ -292,22 +285,59 @@ export class EmulatorService {
     public async startEmulator(emulator: Emulator): Promise<void> {
         if (emulator.os === 'iOS') {
             await this.executeFile('xcrun', ['simctl', 'boot', emulator.id]);
+            this.log?.(`Waiting for iOS Simulator ${emulator.name} to finish booting.`);
+            await this.executeFile('xcrun', ['simctl', 'bootstatus', emulator.id, '-b']);
             await this.executeFile('open', ['-a', 'Simulator']);
         } else {
             const androidHome = this.getAndroidSdkPath();
             const emulatorCommand = path.join(androidHome, 'emulator', 'emulator');
             await this.spawnDetached(emulatorCommand, ['-avd', emulator.id]);
-
-            let retries = 30; // Wait up to 60 seconds
-            while (retries > 0) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                const isRunning = await this.isAndroidEmulatorRunning(emulator.id);
-                if (isRunning) {
-                    break;
-                }
-                retries--;
-            }
+            const serial = await this.waitForAndroidDevice(emulator);
+            await this.waitForAndroidBootCompletion(emulator, serial);
         }
+    }
+
+    private async waitForAndroidDevice(emulator: Emulator): Promise<string> {
+        const deadline = Date.now() + ANDROID_DEVICE_DETECTION_TIMEOUT_MS;
+
+        this.log?.(`Waiting for Android Emulator ${emulator.name} to appear in ADB.`);
+        while (Date.now() < deadline) {
+            const serial = await this.getRunningAndroidSerial(emulator.id);
+            if (serial) {
+                this.log?.(`Android Emulator ${emulator.name} is available in ADB as ${serial}.`);
+                return serial;
+            }
+
+            await this.sleep(STARTUP_POLL_INTERVAL_MS);
+        }
+
+        throw new Error(`Timed out waiting for ${emulator.name} to appear in ADB.`);
+    }
+
+    private async waitForAndroidBootCompletion(emulator: Emulator, serial: string): Promise<void> {
+        const deadline = Date.now() + ANDROID_BOOT_COMPLETION_TIMEOUT_MS;
+        const adbCommand = this.getAdbCommand();
+
+        this.log?.(`Waiting for Android Emulator ${emulator.name} to finish booting.`);
+        while (Date.now() < deadline) {
+            try {
+                const bootCompleted = await this.executeFile(adbCommand, ['-s', serial, 'shell', 'getprop', 'sys.boot_completed']);
+                if (bootCompleted.trim() === '1') {
+                    this.log?.(`Android Emulator ${emulator.name} finished booting.`);
+                    return;
+                }
+            } catch (error) {
+                this.logError(`Failed to check Android boot status for ${emulator.name}`, error);
+            }
+
+            await this.sleep(STARTUP_POLL_INTERVAL_MS);
+        }
+
+        throw new Error(`Timed out waiting for ${emulator.name} to finish booting.`);
+    }
+
+    private sleep(durationMs: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, durationMs));
     }
 
     public async stopEmulator(emulator: Emulator): Promise<void> {
