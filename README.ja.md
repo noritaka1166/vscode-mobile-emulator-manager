@@ -9,6 +9,7 @@ VS Codeのサイドバーから、iOS SimulatorとAndroid Emulatorを一覧表�
 - **サイドバー統合:** Activity Barから利用できる専用ビューで、iOS / Android端末を一覧表示します。
 - **OSバージョン別グループ表示:** `iOS 26.0` や `Android 16 (API 36)` のようにOSバージョンごとに端末を整理して表示します。
 - **端末の起動:** サイドバーからワンクリックでSimulator / Emulatorを起動できます。起動完了まで進捗通知を表示します。
+- **タイムアウトとキャンセル:** 起動・停止・インストールの進捗通知から処理をキャンセルできます。外部コマンドが応答しない場合は、無期限に待機せず自動的にタイムアウトします。
 - **コマンドパレットから起動:** **Mobile Emulator Manager: Start Device...** を実行すると、Android / iOSを選んでから、Quick Pickで停止中の端末を起動できます。
 - **コマンドパレットから起動してインストール:** **Mobile Emulator Manager: Start and Install App...** を実行すると、停止中の端末を選び、起動後にアプリをインストールできます。
 - **端末の停止:** 実行中のSimulator / Emulatorをサイドバーから停止できます。

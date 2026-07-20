@@ -62,16 +62,24 @@ export function activate(context: vscode.ExtensionContext): void {
         }),
         vscode.commands.registerCommand('emulators.stop', async (node: EmulatorTreeItem) => {
             if (node?.emulator) {
-                showInformationMessage(`Stopping ${node.emulator.name}...`);
-                logOutput(outputChannel, `Stopping ${formatEmulator(node.emulator)}.`);
-                try {
-                    await emulatorService.stopEmulator(node.emulator);
-                    logOutput(outputChannel, `Stopped ${formatEmulator(node.emulator)} successfully.`);
-                    showInformationMessage(`Stopped ${node.emulator.name} successfully.`);
-                    treeDataProvider.refresh();
-                } catch (error: unknown) {
-                    reportError(outputChannel, `Failed to stop ${node.emulator.name}`, error);
-                }
+                const emulator = node.emulator;
+                await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Stopping ${emulator.name}...`,
+                    cancellable: true
+                }, async (_progress, cancellationToken) => {
+                    await withCancellation(cancellationToken, async signal => {
+                        logOutput(outputChannel, `Stopping ${formatEmulator(emulator)}.`);
+                        try {
+                            await emulatorService.stopEmulator(emulator, signal);
+                            logOutput(outputChannel, `Stopped ${formatEmulator(emulator)} successfully.`);
+                            showInformationMessage(`Stopped ${emulator.name} successfully.`);
+                            treeDataProvider.refresh();
+                        } catch (error: unknown) {
+                            reportError(outputChannel, `Failed to stop ${emulator.name}`, error);
+                        }
+                    });
+                });
             }
         }),
         vscode.commands.registerCommand('emulators.installApp', async (node: EmulatorTreeItem) => {
@@ -88,17 +96,19 @@ export function activate(context: vscode.ExtensionContext): void {
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
                 title: `Installing ${getFileName(appUri.fsPath)} to ${emulator.name}...`,
-                cancellable: false
-            }, async () => {
-                logOutput(outputChannel, `Installing ${appUri.fsPath} to ${formatEmulator(emulator)}.`);
-                try {
-                    await emulatorService.installApp(emulator, appUri.fsPath);
-                    await saveLastAppPath(context, emulator.os, appUri.fsPath);
-                    logOutput(outputChannel, `Installed ${appUri.fsPath} to ${formatEmulator(emulator)} successfully.`);
-                    showInformationMessage(`Installed app to ${emulator.name} successfully.`);
-                } catch (error: unknown) {
-                    reportError(outputChannel, `Failed to install app to ${emulator.name}`, error);
-                }
+                cancellable: true
+            }, async (_progress, cancellationToken) => {
+                await withCancellation(cancellationToken, async signal => {
+                    logOutput(outputChannel, `Installing ${appUri.fsPath} to ${formatEmulator(emulator)}.`);
+                    try {
+                        await emulatorService.installApp(emulator, appUri.fsPath, signal);
+                        await saveLastAppPath(context, emulator.os, appUri.fsPath);
+                        logOutput(outputChannel, `Installed ${appUri.fsPath} to ${formatEmulator(emulator)} successfully.`);
+                        showInformationMessage(`Installed app to ${emulator.name} successfully.`);
+                    } catch (error: unknown) {
+                        reportError(outputChannel, `Failed to install app to ${emulator.name}`, error);
+                    }
+                });
             });
         }),
         vscode.commands.registerCommand('emulators.installLastApp', async (node: EmulatorTreeItem) => {
@@ -154,6 +164,20 @@ export function activate(context: vscode.ExtensionContext): void {
 
 function logOutput(outputChannel: vscode.OutputChannel, message: string): void {
     outputChannel.appendLine(`[${new Date().toISOString()}] ${message}`);
+}
+
+async function withCancellation<T>(
+    cancellationToken: vscode.CancellationToken,
+    operation: (signal: AbortSignal) => Promise<T>
+): Promise<T> {
+    const controller = new AbortController();
+    const cancellationDisposable = cancellationToken.onCancellationRequested(() => controller.abort());
+
+    try {
+        return await operation(controller.signal);
+    } finally {
+        cancellationDisposable.dispose();
+    }
 }
 
 function formatEmulator(emulator: Emulator): string {
@@ -255,17 +279,19 @@ async function startEmulatorWithProgress(
     await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
         title: `Starting ${emulator.name}...`,
-        cancellable: false
-    }, async () => {
-        logOutput(outputChannel, `Starting ${formatEmulator(emulator)}.`);
-        try {
-            await emulatorService.startEmulator(emulator);
-            logOutput(outputChannel, `Started ${formatEmulator(emulator)} successfully.`);
-            showInformationMessage(`Started ${emulator.name} successfully.`);
-            treeDataProvider.refresh();
-        } catch (error: unknown) {
-            reportError(outputChannel, `Failed to start ${emulator.name}`, error);
-        }
+        cancellable: true
+    }, async (_progress, cancellationToken) => {
+        await withCancellation(cancellationToken, async signal => {
+            logOutput(outputChannel, `Starting ${formatEmulator(emulator)}.`);
+            try {
+                await emulatorService.startEmulator(emulator, signal);
+                logOutput(outputChannel, `Started ${formatEmulator(emulator)} successfully.`);
+                showInformationMessage(`Started ${emulator.name} successfully.`);
+                treeDataProvider.refresh();
+            } catch (error: unknown) {
+                reportError(outputChannel, `Failed to start ${emulator.name}`, error);
+            }
+        });
     });
 }
 
@@ -280,19 +306,21 @@ async function startAndInstallAppWithProgress(
     await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
         title: `Starting ${emulator.name} and installing ${getFileName(appPath)}...`,
-        cancellable: false
-    }, async () => {
-        logOutput(outputChannel, `Starting ${formatEmulator(emulator)} and installing ${appPath}.`);
-        try {
-            await emulatorService.startEmulator(emulator);
-            await emulatorService.installApp(emulator, appPath);
-            await saveLastAppPath(context, emulator.os, appPath);
-            logOutput(outputChannel, `Started ${formatEmulator(emulator)} and installed ${appPath} successfully.`);
-            showInformationMessage(`Started ${emulator.name} and installed app successfully.`);
-            treeDataProvider.refresh();
-        } catch (error: unknown) {
-            reportError(outputChannel, `Failed to start and install app to ${emulator.name}`, error);
-        }
+        cancellable: true
+    }, async (_progress, cancellationToken) => {
+        await withCancellation(cancellationToken, async signal => {
+            logOutput(outputChannel, `Starting ${formatEmulator(emulator)} and installing ${appPath}.`);
+            try {
+                await emulatorService.startEmulator(emulator, signal);
+                await emulatorService.installApp(emulator, appPath, signal);
+                await saveLastAppPath(context, emulator.os, appPath);
+                logOutput(outputChannel, `Started ${formatEmulator(emulator)} and installed ${appPath} successfully.`);
+                showInformationMessage(`Started ${emulator.name} and installed app successfully.`);
+                treeDataProvider.refresh();
+            } catch (error: unknown) {
+                reportError(outputChannel, `Failed to start and install app to ${emulator.name}`, error);
+            }
+        });
     });
 }
 
@@ -320,16 +348,18 @@ async function installLastAppWithProgress(
     await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
         title: `Installing ${getFileName(appPath)} to ${emulator.name}...`,
-        cancellable: false
-    }, async () => {
-        logOutput(outputChannel, `Installing last app ${appPath} to ${formatEmulator(emulator)}.`);
-        try {
-            await emulatorService.installApp(emulator, appPath);
-            logOutput(outputChannel, `Installed last app ${appPath} to ${formatEmulator(emulator)} successfully.`);
-            showInformationMessage(`Installed ${getFileName(appPath)} to ${emulator.name} successfully.`);
-        } catch (error: unknown) {
-            reportError(outputChannel, `Failed to install last app to ${emulator.name}`, error);
-        }
+        cancellable: true
+    }, async (_progress, cancellationToken) => {
+        await withCancellation(cancellationToken, async signal => {
+            logOutput(outputChannel, `Installing last app ${appPath} to ${formatEmulator(emulator)}.`);
+            try {
+                await emulatorService.installApp(emulator, appPath, signal);
+                logOutput(outputChannel, `Installed last app ${appPath} to ${formatEmulator(emulator)} successfully.`);
+                showInformationMessage(`Installed ${getFileName(appPath)} to ${emulator.name} successfully.`);
+            } catch (error: unknown) {
+                reportError(outputChannel, `Failed to install last app to ${emulator.name}`, error);
+            }
+        });
     });
 }
 
@@ -354,6 +384,12 @@ function getGuidedErrorMessage(prefix: string, error: unknown): string {
 }
 
 function reportError(outputChannel: vscode.OutputChannel, prefix: string, error: unknown): void {
+    if (getErrorDetails(error) === 'Operation cancelled.') {
+        logOutput(outputChannel, `${prefix}: Operation cancelled.`);
+        showInformationMessage('Operation cancelled.');
+        return;
+    }
+
     const message = getGuidedErrorMessage(prefix, error);
     logOutput(outputChannel, message);
     vscode.window.showErrorMessage(message);

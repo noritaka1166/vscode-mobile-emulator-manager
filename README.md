@@ -9,6 +9,7 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 - **Sidebar Integration:** View a list of all available iOS and Android devices in the Activity Bar.
 - **Smart Grouping:** Devices are neatly grouped by their OS Version (e.g., `iOS 26.0`, `Android 16 (API 36)`), making it easy to find the exact environment you need.
 - **Start Devices:** Boot up your simulator/emulator with a single click. A loading indicator will appear, ensuring the device is fully booted and recognized before the status updates.
+- **Timeouts and Cancellation:** Start, stop, and install operations can be cancelled from their progress notification. Commands time out automatically instead of leaving the operation running indefinitely.
 - **Quick Start from Command Palette:** Run **Mobile Emulator Manager: Start Device...** to choose Android or iOS, then start a stopped device without opening the sidebar.
 - **Quick Start and Install from Command Palette:** Run **Mobile Emulator Manager: Start and Install App...** to choose a stopped device and install an app in one flow.
 - **Stop Devices:** Shut down running emulators quickly without needing terminal commands.
