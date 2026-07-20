@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 import { getAndroidToolPath, getDefaultAndroidSdkPaths } from './androidSdk';
 
 const ANDROID_OS_VERSION_BY_API: Record<string, string> = {
+    '37': 'Android 17',
     '36': 'Android 16',
     '35': 'Android 15',
     '34': 'Android 14',
