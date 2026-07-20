@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { Emulator, EmulatorService } from './emulatorService';
-import { EmulatorTreeDataProvider, EmulatorTreeItem } from './treeDataProvider';
+import { type Emulator, EmulatorService } from './emulatorService';
+import { EmulatorTreeDataProvider, type EmulatorTreeItem } from './treeDataProvider';
 
 const LAST_ANDROID_APP_PATH_KEY = 'lastAndroidAppPath';
 const LAST_IOS_APP_PATH_KEY = 'lastIosAppPath';
@@ -139,24 +139,25 @@ export function activate(context: vscode.ExtensionContext): void {
             }
         }),
         vscode.commands.registerCommand('emulators.copyAndroidSerial', async (node: EmulatorTreeItem) => {
-            if (!node?.emulator || node.emulator?.os !== 'Android') {
+            const emulator = node?.emulator;
+            if (emulator?.os !== 'Android') {
                 return;
             }
 
             try {
-                logOutput(outputChannel, `Resolving ADB serial for ${formatEmulator(node.emulator)}.`);
-                const serial = await emulatorService.getRunningAndroidSerial(node.emulator.id);
+                logOutput(outputChannel, `Resolving ADB serial for ${formatEmulator(emulator)}.`);
+                const serial = await emulatorService.getRunningAndroidSerial(emulator.id);
                 if (!serial) {
-                    logOutput(outputChannel, `ADB serial could not be found for ${formatEmulator(node.emulator)}.`);
-                    showWarningMessage(`${node.emulator.name} is not running or its ADB serial could not be found.`);
+                    logOutput(outputChannel, `ADB serial could not be found for ${formatEmulator(emulator)}.`);
+                    showWarningMessage(`${emulator.name} is not running or its ADB serial could not be found.`);
                     return;
                 }
 
                 await vscode.env.clipboard.writeText(serial);
-                logOutput(outputChannel, `Copied ADB serial for ${formatEmulator(node.emulator)}: ${serial}`);
+                logOutput(outputChannel, `Copied ADB serial for ${formatEmulator(emulator)}: ${serial}`);
                 showInformationMessage(`Copied ADB serial: ${serial}`);
             } catch (error: unknown) {
-                reportError(outputChannel, `Failed to copy ADB serial for ${node.emulator.name}`, error);
+                reportError(outputChannel, `Failed to copy ADB serial for ${emulator.name}`, error);
             }
         })
     );

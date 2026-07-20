@@ -3,6 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as vscode from 'vscode';
+import { getAndroidToolPath, getDefaultAndroidSdkPaths } from './androidSdk';
 
 const ANDROID_OS_VERSION_BY_API: Record<string, string> = {
     '36': 'Android 16',
@@ -66,10 +67,10 @@ export class EmulatorService {
     private getAdbCommand(): string {
         const configuredOrEnvSdkPath = this.getConfiguredOrEnvironmentAndroidSdkPath();
         if (configuredOrEnvSdkPath) {
-            return this.getAndroidToolPath(configuredOrEnvSdkPath, 'platform-tools', 'adb');
+            return getAndroidToolPath(configuredOrEnvSdkPath, 'platform-tools', 'adb', process.platform);
         }
 
-        const defaultAdbCommand = this.getAndroidToolPath(this.getAndroidSdkPath(), 'platform-tools', 'adb');
+        const defaultAdbCommand = getAndroidToolPath(this.getAndroidSdkPath(), 'platform-tools', 'adb', process.platform);
         return fs.existsSync(defaultAdbCommand) ? defaultAdbCommand : 'adb';
     }
 
@@ -79,7 +80,7 @@ export class EmulatorService {
             return configuredOrEnvSdkPath;
         }
 
-        const defaultSdkPaths = this.getDefaultAndroidSdkPaths();
+        const defaultSdkPaths = getDefaultAndroidSdkPaths(process.platform, os.homedir(), process.env.LOCALAPPDATA);
         return defaultSdkPaths.find(sdkPath => fs.existsSync(sdkPath)) || defaultSdkPaths[0];
     }
 
@@ -105,30 +106,6 @@ export class EmulatorService {
 
         const androidHome = process.env.ANDROID_HOME?.trim();
         return androidHome ? this.expandHome(androidHome) : undefined;
-    }
-
-    private getDefaultAndroidSdkPaths(): string[] {
-        const home = os.homedir();
-
-        switch (process.platform) {
-            case 'win32':
-                return [
-                    process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Android', 'Sdk') : '',
-                    path.join(home, 'AppData', 'Local', 'Android', 'Sdk')
-                ].filter(Boolean);
-            case 'linux':
-                return [
-                    path.join(home, 'Android', 'Sdk'),
-                    path.join(home, 'Android', 'sdk')
-                ];
-            default:
-                return [path.join(home, 'Library', 'Android', 'sdk')];
-        }
-    }
-
-    private getAndroidToolPath(sdkPath: string, directory: string, toolName: string): string {
-        const executableName = process.platform === 'win32' ? `${toolName}.exe` : toolName;
-        return path.join(sdkPath, directory, executableName);
     }
 
     private expandHome(filePath: string): string {
@@ -297,7 +274,7 @@ export class EmulatorService {
     private async getAndroidEmulators(): Promise<Emulator[]> {
         try {
             const androidHome = this.getAndroidSdkPath();
-            const emulatorCommand = this.getAndroidToolPath(androidHome, 'emulator', 'emulator');
+            const emulatorCommand = getAndroidToolPath(androidHome, 'emulator', 'emulator', process.platform);
 
             const output = await this.executeFile(emulatorCommand, ['-list-avds']);
             const avds = output.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -305,7 +282,9 @@ export class EmulatorService {
             const runningEmuNames = new Set<string>();
             try {
                 const runningDevices = await this.getRunningAndroidDevices();
-                runningDevices.forEach(device => runningEmuNames.add(device.avdName));
+                for (const device of runningDevices) {
+                    runningEmuNames.add(device.avdName);
+                }
             } catch (error) {
                 this.logError('Failed to list running Android emulators', error);
             }
@@ -346,7 +325,7 @@ export class EmulatorService {
             await this.executeFile('open', ['-a', 'Simulator'], { signal });
         } else {
             const androidHome = this.getAndroidSdkPath();
-            const emulatorCommand = this.getAndroidToolPath(androidHome, 'emulator', 'emulator');
+            const emulatorCommand = getAndroidToolPath(androidHome, 'emulator', 'emulator', process.platform);
             this.throwIfCancelled(signal);
             await this.spawnDetached(emulatorCommand, ['-avd', emulator.id]);
             const serial = await this.waitForAndroidDevice(emulator, signal);

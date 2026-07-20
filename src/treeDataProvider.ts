@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { Emulator, EmulatorService } from './emulatorService';
+import type { Emulator, EmulatorService } from './emulatorService';
 
-type TreeDataChange = EmulatorTreeItem | undefined | null | void;
+type TreeDataChange = EmulatorTreeItem | undefined | null;
 
 export class EmulatorTreeDataProvider implements vscode.TreeDataProvider<EmulatorTreeItem> {
     private readonly _onDidChangeTreeData: vscode.EventEmitter<TreeDataChange> = new vscode.EventEmitter<TreeDataChange>();
@@ -10,7 +10,7 @@ export class EmulatorTreeDataProvider implements vscode.TreeDataProvider<Emulato
     constructor(private readonly emulatorService: EmulatorService) {}
 
     refresh(): void {
-        this._onDidChangeTreeData.fire();
+        this._onDidChangeTreeData.fire(undefined);
     }
 
     getTreeItem(element: EmulatorTreeItem): vscode.TreeItem {
@@ -29,8 +29,7 @@ export class EmulatorTreeDataProvider implements vscode.TreeDataProvider<Emulato
             const emulators = await this.emulatorService.getEmulators();
             const platformEmulators = emulators.filter(e => e.os === element.os);
             
-            const versions = new Set<string>();
-            platformEmulators.forEach(e => versions.add(e.osVersion || 'Unknown'));
+            const versions = new Set(platformEmulators.map(emulator => emulator.osVersion || 'Unknown'));
             
             return Array.from(versions)
                 .sort((a, b) => b.localeCompare(a)) // Sort versions descending
