@@ -198,8 +198,10 @@ export class EmulatorService {
     }
 
     public async getEmulators(): Promise<Emulator[]> {
-        const iosEmulators = await this.getIosEmulators();
-        const androidEmulators = await this.getAndroidEmulators();
+        const [iosEmulators, androidEmulators] = await Promise.all([
+            this.getIosEmulators(),
+            this.getAndroidEmulators()
+        ]);
         return [...iosEmulators, ...androidEmulators];
     }
 
