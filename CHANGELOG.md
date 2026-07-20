@@ -2,6 +2,22 @@
 
 All notable changes to "Mobile Emulator Manager" will be documented in this file.
 
+## [0.3.0] - 2026-07-21
+
+### Added
+- Added Android SDK auto-detection through `ANDROID_SDK_ROOT` and platform-specific default paths for Windows and Linux
+- Added cancellable progress notifications and command timeouts for device start, stop, and app installation operations
+- Added English and Japanese localization for runtime UI messages, commands, views, and settings
+- Added Biome linting and automated tests for Android SDK path resolution
+- Added Android 17 (API 37) display support
+
+### Changed
+- Fetch iOS Simulators and Android Emulators in parallel to reduce device-list loading time
+
+### Fixed
+- Report Android stop operations as failed when the running device's ADB serial cannot be found
+- Simplified command error-message selection to improve readability
+
 ## [0.2.0] - 2026-07-09
 
 ### Changed

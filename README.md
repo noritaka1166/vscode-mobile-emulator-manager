@@ -7,9 +7,10 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 ## Features
 
 - **Sidebar Integration:** View a list of all available iOS and Android devices in the Activity Bar.
-- **Smart Grouping:** Devices are neatly grouped by their OS Version (e.g., `iOS 26.0`, `Android 16 (API 36)`), making it easy to find the exact environment you need.
+- **Smart Grouping:** Devices are neatly grouped by their OS Version (e.g., `iOS 26.0`, `Android 17 (API 37)`), making it easy to find the exact environment you need.
 - **Start Devices:** Boot up your simulator/emulator with a single click. A loading indicator will appear, ensuring the device is fully booted and recognized before the status updates.
-- **Timeouts and Cancellation:** Start, stop, and install operations can be cancelled from their progress notification. Commands time out automatically instead of leaving the operation running indefinitely.
+- **Timeouts and Cancellation:** Start, stop, and install operations can be cancelled from their progress notification. Commands time out automatically instead of leaving the operation running indefinitely. Cancelling an Android start stops waiting for boot completion, but an emulator that has already launched continues starting in the background.
+- **Localized UI:** Runtime messages, commands, views, and settings follow the VS Code display language, with English and Japanese translations included.
 - **Quick Start from Command Palette:** Run **Mobile Emulator Manager: Start Device...** to choose Android or iOS, then start a stopped device without opening the sidebar.
 - **Quick Start and Install from Command Palette:** Run **Mobile Emulator Manager: Start and Install App...** to choose a stopped device and install an app in one flow.
 - **Stop Devices:** Shut down running emulators quickly without needing terminal commands.
@@ -26,7 +27,7 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 
 - **iOS:** Requires Xcode and `xcrun simctl` command line tools to be installed. (Mac only)
 - **Android:** Requires Android Studio / Android SDK to be installed. 
-  - By default, the extension uses the `mobileEmulatorManager.androidSdkPath` VS Code setting, then `ANDROID_SDK_ROOT`, `ANDROID_HOME`, and finally the platform default SDK location (`~/Library/Android/sdk` on macOS, `%LOCALAPPDATA%\Android\Sdk` on Windows, or `~/Android/Sdk` on Linux).
+  - By default, the extension uses the `mobileEmulatorManager.androidSdkPath` VS Code setting, then `ANDROID_SDK_ROOT`, `ANDROID_HOME`, and finally the platform default SDK location (`~/Library/Android/sdk` on macOS, `%LOCALAPPDATA%\Android\Sdk` on Windows, or `~/Android/Sdk` / `~/Android/sdk` on Linux).
   - Android SDK Platform-Tools must be available so the extension can run `adb`.
   - Android Emulator must be installed so the extension can list and start AVDs.
 
