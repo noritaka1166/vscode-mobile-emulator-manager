@@ -7,6 +7,7 @@ package-lock.json
 *.vsix
 .DS_Store
 .github/
+biome.json
 **/tsconfig.json
 **/*.map
 **/*.ts
