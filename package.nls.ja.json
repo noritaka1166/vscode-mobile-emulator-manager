@@ -1,0 +1,20 @@
+{
+    "extension.displayName": "Mobile Emulator Manager: iOS・Android",
+    "extension.description": "VS Code から Android Emulator と iOS Simulator を起動・停止・管理します。APK / IPA のインストール、端末のクイック起動、ADB serial / UDID のコピーに対応しています。",
+    "capabilities.untrustedWorkspaces.description": "Mobile Emulator Manager は、ローカルの Android SDK と Xcode のコマンドラインツールを使ってエミュレータの一覧表示、起動、停止、アプリのインストールを行います。",
+    "configuration.title": "Mobile Emulator Manager",
+    "configuration.androidSdkPath.markdownDescription": "Android SDK のパスです。空の場合は `ANDROID_SDK_ROOT`、`ANDROID_HOME`、または OS ごとの既定 SDK パスを使用します。",
+    "viewsContainers.emulators.title": "エミュレータ",
+    "views.devices.name": "デバイス",
+    "commands.refresh.title": "更新",
+    "commands.start.title": "起動",
+    "commands.quickStart.title": "Mobile Emulator Manager: 端末を起動...",
+    "commands.quickStartAndInstallApp.title": "Mobile Emulator Manager: 起動してアプリをインストール...",
+    "commands.quickInstallLastApp.title": "Mobile Emulator Manager: 最後のアプリをインストール...",
+    "commands.stop.title": "停止",
+    "commands.installApp.title": "アプリをインストール...",
+    "commands.installLastApp.title": "最後のアプリをインストール",
+    "commands.startAndInstallApp.title": "起動してアプリをインストール...",
+    "commands.copyId.title": "UDID をコピー",
+    "commands.copyAndroidSerial.title": "ADB serial をコピー"
+}

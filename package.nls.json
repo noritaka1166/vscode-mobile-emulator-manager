@@ -1,0 +1,20 @@
+{
+    "extension.displayName": "Mobile Emulator Manager: iOS & Android",
+    "extension.description": "Launch, stop, and manage Android Emulators and iOS Simulators in VS Code. Install APK/IPA apps, quick-start devices, and copy ADB serials or UDIDs.",
+    "capabilities.untrustedWorkspaces.description": "Mobile Emulator Manager runs local Android SDK and Xcode command-line tools to list, start, stop, and install apps on emulators.",
+    "configuration.title": "Mobile Emulator Manager",
+    "configuration.androidSdkPath.markdownDescription": "Path to the Android SDK. When empty, the extension uses `ANDROID_SDK_ROOT`, `ANDROID_HOME`, or the platform default SDK location.",
+    "viewsContainers.emulators.title": "Emulators",
+    "views.devices.name": "Devices",
+    "commands.refresh.title": "Refresh",
+    "commands.start.title": "Start",
+    "commands.quickStart.title": "Mobile Emulator Manager: Start Device...",
+    "commands.quickStartAndInstallApp.title": "Mobile Emulator Manager: Start and Install App...",
+    "commands.quickInstallLastApp.title": "Mobile Emulator Manager: Install Last App...",
+    "commands.stop.title": "Stop",
+    "commands.installApp.title": "Install App...",
+    "commands.installLastApp.title": "Install Last App",
+    "commands.startAndInstallApp.title": "Start and Install App...",
+    "commands.copyId.title": "Copy UDID",
+    "commands.copyAndroidSerial.title": "Copy ADB Serial"
+}

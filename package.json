@@ -1,7 +1,7 @@
 {
   "name": "mobile-emulator-manager",
-  "displayName": "Mobile Emulator Manager: iOS & Android",
-  "description": "Launch, stop, and manage Android Emulators and iOS Simulators in VS Code. Install APK/IPA apps, quick-start devices, and copy ADB serials or UDIDs.",
+  "displayName": "%extension.displayName%",
+  "description": "%extension.description%",
   "publisher": "noritaka1166",
   "version": "0.2.0",
   "repository": {
@@ -28,7 +28,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": false,
-      "description": "Mobile Emulator Manager runs local Android SDK and Xcode command-line tools to list, start, stop, and install apps on emulators."
+      "description": "%capabilities.untrustedWorkspaces.description%"
     }
   },
   "categories": [
@@ -66,15 +66,16 @@
     "developer tools"
   ],
   "main": "./out/extension.js",
+  "l10n": "./l10n",
   "contributes": {
     "configuration": {
-      "title": "Mobile Emulator Manager",
+      "title": "%configuration.title%",
       "properties": {
         "mobileEmulatorManager.androidSdkPath": {
           "type": "string",
           "default": "",
           "scope": "machine-overridable",
-          "markdownDescription": "Path to the Android SDK. When empty, the extension uses `ANDROID_SDK_ROOT`, `ANDROID_HOME`, or the platform default SDK location."
+          "markdownDescription": "%configuration.androidSdkPath.markdownDescription%"
         }
       }
     },
@@ -82,7 +83,7 @@
       "activitybar": [
         {
           "id": "emulator-manager",
-          "title": "Emulators",
+          "title": "%viewsContainers.emulators.title%",
           "icon": "assets/emulators.svg"
         }
       ]
@@ -91,7 +92,7 @@
       "emulator-manager": [
         {
           "id": "emulatorsView",
-          "name": "Devices",
+          "name": "%views.devices.name%",
           "icon": "assets/emulators.svg"
         }
       ]
@@ -99,32 +100,32 @@
     "commands": [
       {
         "command": "emulators.refresh",
-        "title": "Refresh",
+        "title": "%commands.refresh.title%",
         "icon": "$(refresh)"
       },
       {
         "command": "emulators.start",
-        "title": "Start",
+        "title": "%commands.start.title%",
         "icon": "$(debug-start)"
       },
       {
         "command": "emulators.quickStart",
-        "title": "Mobile Emulator Manager: Start Device...",
+        "title": "%commands.quickStart.title%",
         "icon": "$(play)"
       },
       {
         "command": "emulators.quickStartAndInstallApp",
-        "title": "Mobile Emulator Manager: Start and Install App...",
+        "title": "%commands.quickStartAndInstallApp.title%",
         "icon": "$(run-all)"
       },
       {
         "command": "emulators.quickInstallLastApp",
-        "title": "Mobile Emulator Manager: Install Last App...",
+        "title": "%commands.quickInstallLastApp.title%",
         "icon": "$(history)"
       },
       {
         "command": "emulators.stop",
-        "title": "Stop",
+        "title": "%commands.stop.title%",
         "icon": {
           "light": "assets/stop-red.svg",
           "dark": "assets/stop-red.svg"
@@ -132,26 +133,26 @@
       },
       {
         "command": "emulators.installApp",
-        "title": "Install App...",
+        "title": "%commands.installApp.title%",
         "icon": "$(package)"
       },
       {
         "command": "emulators.installLastApp",
-        "title": "Install Last App",
+        "title": "%commands.installLastApp.title%",
         "icon": "$(history)"
       },
       {
         "command": "emulators.startAndInstallApp",
-        "title": "Start and Install App...",
+        "title": "%commands.startAndInstallApp.title%",
         "icon": "$(rocket)"
       },
       {
         "command": "emulators.copyId",
-        "title": "Copy UDID"
+        "title": "%commands.copyId.title%"
       },
       {
         "command": "emulators.copyAndroidSerial",
-        "title": "Copy ADB Serial"
+        "title": "%commands.copyAndroidSerial.title%"
       }
     ],
     "menus": {
@@ -210,12 +211,14 @@
     "lint:fix": "biome lint --write src",
     "format": "biome format --write src",
     "format:check": "biome format src",
-    "test": "npm run compile && node --test out/test/androidSdk.test.js"
+    "test": "npm run compile && node --test out/test/androidSdk.test.js",
+    "l10n:generate": "npx @vscode/l10n-dev export ./src --outDir ./l10n"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.4",
     "@types/node": "^24.13.1",
     "@types/vscode": "^1.80.0",
+    "@vscode/l10n-dev": "^0.0.35",
     "esbuild": "^0.28.1",
     "typescript": "^7.0.2"
   }
