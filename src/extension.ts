@@ -356,15 +356,15 @@ function getGuidedErrorMessage(prefix: string, error: unknown): string {
 function reportError(outputChannel: vscode.OutputChannel, prefix: string, error: unknown): void {
     const message = getGuidedErrorMessage(prefix, error);
     logOutput(outputChannel, message);
-    void vscode.window.showErrorMessage(message);
+    vscode.window.showErrorMessage(message);
 }
 
 function showInformationMessage(message: string): void {
-    void vscode.window.showInformationMessage(message);
+    vscode.window.showInformationMessage(message);
 }
 
 function showWarningMessage(message: string): void {
-    void vscode.window.showWarningMessage(message);
+    vscode.window.showWarningMessage(message);
 }
 
 function getErrorDetails(error: unknown): string {
