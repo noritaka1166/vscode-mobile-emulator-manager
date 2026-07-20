@@ -25,13 +25,13 @@ VS Codeのサイドバーから、iOS SimulatorとAndroid Emulatorを一覧表�
 
 - **iOS:** Xcodeと `xcrun simctl` command line toolsが必要です。macOSのみ対応です。
 - **Android:** Android Studio / Android SDKが必要です。
-  - Android SDKの場所は、`mobileEmulatorManager.androidSdkPath` VS Code設定、`ANDROID_HOME`、`~/Library/Android/sdk` の順に参照します。
+  - Android SDKの場所は、`mobileEmulatorManager.androidSdkPath` VS Code設定、`ANDROID_SDK_ROOT`、`ANDROID_HOME`、OSごとの既定パス（macOS: `~/Library/Android/sdk`、Windows: `%LOCALAPPDATA%\Android\Sdk`、Linux: `~/Android/Sdk`）の順に参照します。
   - `adb` を実行するために Android SDK Platform-Tools が必要です。
   - AVDの一覧表示と起動のために Android Emulator が必要です。
 
 ## 設定
 
-- **`mobileEmulatorManager.androidSdkPath`:** Android SDKへの任意のパスです。SDKが `~/Library/Android/sdk` 以外にある場合や、`ANDROID_HOME` を設定していない場合に指定してください。
+- **`mobileEmulatorManager.androidSdkPath`:** Android SDKへの任意のパスです。環境変数やOSごとの既定パスでSDKが見つからない場合に指定してください。
 
 ## 使い方
 
@@ -50,7 +50,7 @@ VS Codeのサイドバーから、iOS SimulatorとAndroid Emulatorを一覧表�
 ## トラブルシューティング
 
 - Android端末が表示されない場合は、Android Studio、Android SDK、Android Emulator、Android SDK Platform-Toolsがインストールされているか確認してください。
-- Android操作で `adb` エラーが出る場合は、`mobileEmulatorManager.androidSdkPath` または `ANDROID_HOME` にAndroid SDKのパスを設定するか、`adb` を `PATH` に追加してください。
+- Android操作で `adb` エラーが出る場合は、`mobileEmulatorManager.androidSdkPath`、`ANDROID_SDK_ROOT`、または `ANDROID_HOME` にAndroid SDKのパスを設定するか、`adb` を `PATH` に追加してください。
 - iOS端末が表示されない、または起動に失敗する場合は、Xcodeがインストールされていて、ターミナルから `xcrun simctl` を実行できるか確認してください。
 - アプリのインストールに失敗する場合は、Androidには `.apk`、iOS SimulatorにはSimulatorへインストール可能な `.app` を含む `.ipa` を選択してください。
 - 端末の状態表示が古い場合は、DevicesビューのRefreshボタンを押してください。

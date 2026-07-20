@@ -56,23 +56,23 @@ export class EmulatorService {
     constructor(private readonly log?: (message: string) => void) {}
 
     private getAdbCommand(): string {
-        const configuredOrEnvSdkPath = this.getConfiguredAndroidSdkPath() || process.env.ANDROID_HOME?.trim();
+        const configuredOrEnvSdkPath = this.getConfiguredOrEnvironmentAndroidSdkPath();
         if (configuredOrEnvSdkPath) {
-            return path.join(this.expandHome(configuredOrEnvSdkPath), 'platform-tools', 'adb');
+            return this.getAndroidToolPath(configuredOrEnvSdkPath, 'platform-tools', 'adb');
         }
 
-        const defaultAdbCommand = path.join(this.getDefaultAndroidSdkPath(), 'platform-tools', 'adb');
+        const defaultAdbCommand = this.getAndroidToolPath(this.getAndroidSdkPath(), 'platform-tools', 'adb');
         return fs.existsSync(defaultAdbCommand) ? defaultAdbCommand : 'adb';
     }
 
     private getAndroidSdkPath(): string {
-        const configuredSdkPath = this.getConfiguredAndroidSdkPath();
-        if (configuredSdkPath) {
-            return configuredSdkPath;
+        const configuredOrEnvSdkPath = this.getConfiguredOrEnvironmentAndroidSdkPath();
+        if (configuredOrEnvSdkPath) {
+            return configuredOrEnvSdkPath;
         }
 
-        const androidHome = process.env.ANDROID_HOME?.trim();
-        return androidHome ? this.expandHome(androidHome) : this.getDefaultAndroidSdkPath();
+        const defaultSdkPaths = this.getDefaultAndroidSdkPaths();
+        return defaultSdkPaths.find(sdkPath => fs.existsSync(sdkPath)) || defaultSdkPaths[0];
     }
 
     private getConfiguredAndroidSdkPath(): string | undefined {
@@ -84,8 +84,43 @@ export class EmulatorService {
         return configuredPath ? this.expandHome(configuredPath) : undefined;
     }
 
-    private getDefaultAndroidSdkPath(): string {
-        return path.join(os.homedir(), 'Library', 'Android', 'sdk');
+    private getConfiguredOrEnvironmentAndroidSdkPath(): string | undefined {
+        const configuredSdkPath = this.getConfiguredAndroidSdkPath();
+        if (configuredSdkPath) {
+            return configuredSdkPath;
+        }
+
+        const androidSdkRoot = process.env.ANDROID_SDK_ROOT?.trim();
+        if (androidSdkRoot) {
+            return this.expandHome(androidSdkRoot);
+        }
+
+        const androidHome = process.env.ANDROID_HOME?.trim();
+        return androidHome ? this.expandHome(androidHome) : undefined;
+    }
+
+    private getDefaultAndroidSdkPaths(): string[] {
+        const home = os.homedir();
+
+        switch (process.platform) {
+            case 'win32':
+                return [
+                    process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Android', 'Sdk') : '',
+                    path.join(home, 'AppData', 'Local', 'Android', 'Sdk')
+                ].filter(Boolean);
+            case 'linux':
+                return [
+                    path.join(home, 'Android', 'Sdk'),
+                    path.join(home, 'Android', 'sdk')
+                ];
+            default:
+                return [path.join(home, 'Library', 'Android', 'sdk')];
+        }
+    }
+
+    private getAndroidToolPath(sdkPath: string, directory: string, toolName: string): string {
+        const executableName = process.platform === 'win32' ? `${toolName}.exe` : toolName;
+        return path.join(sdkPath, directory, executableName);
     }
 
     private expandHome(filePath: string): string {
@@ -244,7 +279,7 @@ export class EmulatorService {
     private async getAndroidEmulators(): Promise<Emulator[]> {
         try {
             const androidHome = this.getAndroidSdkPath();
-            const emulatorCommand = path.join(androidHome, 'emulator', 'emulator');
+            const emulatorCommand = this.getAndroidToolPath(androidHome, 'emulator', 'emulator');
 
             const output = await this.executeFile(emulatorCommand, ['-list-avds']);
             const avds = output.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -290,7 +325,7 @@ export class EmulatorService {
             await this.executeFile('open', ['-a', 'Simulator']);
         } else {
             const androidHome = this.getAndroidSdkPath();
-            const emulatorCommand = path.join(androidHome, 'emulator', 'emulator');
+            const emulatorCommand = this.getAndroidToolPath(androidHome, 'emulator', 'emulator');
             await this.spawnDetached(emulatorCommand, ['-avd', emulator.id]);
             const serial = await this.waitForAndroidDevice(emulator);
             await this.waitForAndroidBootCompletion(emulator, serial);
