@@ -191,11 +191,12 @@ export class EmulatorService {
             }, (error, stdout, stderr) => {
                 if (error) {
                     const commandError = error as NodeJS.ErrnoException & { killed?: boolean };
-                    const message = options.signal?.aborted || commandError.code === 'ABORT_ERR'
-                        ? 'Operation cancelled.'
-                        : commandError.killed
-                            ? `Command timed out after ${options.timeoutMs ?? COMMAND_TIMEOUT_MS} ms.`
-                            : stderr.trim() || error.message;
+                    let message = stderr.trim() || error.message;
+                    if (options.signal?.aborted || commandError.code === 'ABORT_ERR') {
+                        message = 'Operation cancelled.';
+                    } else if (commandError.killed) {
+                        message = `Command timed out after ${options.timeoutMs ?? COMMAND_TIMEOUT_MS} ms.`;
+                    }
                     this.log?.(`Command failed: ${message}`);
                     reject(new Error(message));
                 } else {
