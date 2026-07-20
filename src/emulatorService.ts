@@ -345,9 +345,11 @@ export class EmulatorService {
             await this.executeFile('xcrun', ['simctl', 'shutdown', emulator.id]);
         } else {
             const serial = await this.getRunningAndroidSerial(emulator.id);
-            if (serial) {
-                await this.executeFile(this.getAdbCommand(), ['-s', serial, 'emu', 'kill']);
+            if (!serial) {
+                throw new Error(`${emulator.name} is not running or its ADB serial could not be found.`);
             }
+
+            await this.executeFile(this.getAdbCommand(), ['-s', serial, 'emu', 'kill']);
         }
     }
 
