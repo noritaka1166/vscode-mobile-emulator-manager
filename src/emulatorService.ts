@@ -1,28 +1,28 @@
-import { execFile, spawn } from 'node:child_process';
-import * as os from 'node:os';
-import * as path from 'node:path';
-import * as fs from 'node:fs';
-import * as vscode from 'vscode';
-import { getAndroidToolPath, getDefaultAndroidSdkPaths } from './androidSdk';
+import { execFile, spawn } from "node:child_process";
+import * as os from "node:os";
+import * as path from "node:path";
+import * as fs from "node:fs";
+import * as vscode from "vscode";
+import { getAndroidToolPath, getDefaultAndroidSdkPaths } from "./androidSdk";
 
 const ANDROID_OS_VERSION_BY_API: Record<string, string> = {
-    '37': 'Android 17',
-    '36': 'Android 16',
-    '35': 'Android 15',
-    '34': 'Android 14',
-    '33': 'Android 13',
-    '32': 'Android 12L',
-    '31': 'Android 12',
-    '30': 'Android 11',
-    '29': 'Android 10',
-    '28': 'Android 9',
-    '27': 'Android 8.1',
-    '26': 'Android 8.0',
-    '25': 'Android 7.1',
-    '24': 'Android 7.0',
-    '23': 'Android 6.0',
-    '22': 'Android 5.1',
-    '21': 'Android 5.0'
+    "37": "Android 17",
+    "36": "Android 16",
+    "35": "Android 15",
+    "34": "Android 14",
+    "33": "Android 13",
+    "32": "Android 12L",
+    "31": "Android 12",
+    "30": "Android 11",
+    "29": "Android 10",
+    "28": "Android 9",
+    "27": "Android 8.1",
+    "26": "Android 8.0",
+    "25": "Android 7.1",
+    "24": "Android 7.0",
+    "23": "Android 6.0",
+    "22": "Android 5.1",
+    "21": "Android 5.0",
 };
 
 const SIM_RUNTIME_VERSION_PATTERN = /SimRuntime\.(.+?)-(\d+)-(\d+)/;
@@ -37,9 +37,9 @@ const STARTUP_POLL_INTERVAL_MS = 2_000;
 export interface Emulator {
     id: string; // uuid for iOS, name for Android
     name: string;
-    os: 'iOS' | 'Android';
+    os: "iOS" | "Android";
     osVersion?: string;
-    state: 'running' | 'stopped';
+    state: "running" | "stopped";
 }
 
 interface SimctlDevice {
@@ -66,29 +66,48 @@ export class EmulatorService {
     constructor(private readonly log?: (message: string) => void) {}
 
     private getAdbCommand(): string {
-        const configuredOrEnvSdkPath = this.getConfiguredOrEnvironmentAndroidSdkPath();
+        const configuredOrEnvSdkPath =
+            this.getConfiguredOrEnvironmentAndroidSdkPath();
         if (configuredOrEnvSdkPath) {
-            return getAndroidToolPath(configuredOrEnvSdkPath, 'platform-tools', 'adb', process.platform);
+            return getAndroidToolPath(
+                configuredOrEnvSdkPath,
+                "platform-tools",
+                "adb",
+                process.platform,
+            );
         }
 
-        const defaultAdbCommand = getAndroidToolPath(this.getAndroidSdkPath(), 'platform-tools', 'adb', process.platform);
-        return fs.existsSync(defaultAdbCommand) ? defaultAdbCommand : 'adb';
+        const defaultAdbCommand = getAndroidToolPath(
+            this.getAndroidSdkPath(),
+            "platform-tools",
+            "adb",
+            process.platform,
+        );
+        return fs.existsSync(defaultAdbCommand) ? defaultAdbCommand : "adb";
     }
 
     private getAndroidSdkPath(): string {
-        const configuredOrEnvSdkPath = this.getConfiguredOrEnvironmentAndroidSdkPath();
+        const configuredOrEnvSdkPath =
+            this.getConfiguredOrEnvironmentAndroidSdkPath();
         if (configuredOrEnvSdkPath) {
             return configuredOrEnvSdkPath;
         }
 
-        const defaultSdkPaths = getDefaultAndroidSdkPaths(process.platform, os.homedir(), process.env.LOCALAPPDATA);
-        return defaultSdkPaths.find(sdkPath => fs.existsSync(sdkPath)) || defaultSdkPaths[0];
+        const defaultSdkPaths = getDefaultAndroidSdkPaths(
+            process.platform,
+            os.homedir(),
+            process.env.LOCALAPPDATA,
+        );
+        return (
+            defaultSdkPaths.find((sdkPath) => fs.existsSync(sdkPath)) ||
+            defaultSdkPaths[0]
+        );
     }
 
     private getConfiguredAndroidSdkPath(): string | undefined {
         const configuredPath = vscode.workspace
-            .getConfiguration('mobileEmulatorManager')
-            .get<string>('androidSdkPath')
+            .getConfiguration("mobileEmulatorManager")
+            .get<string>("androidSdkPath")
             ?.trim();
 
         return configuredPath ? this.expandHome(configuredPath) : undefined;
@@ -110,11 +129,11 @@ export class EmulatorService {
     }
 
     private expandHome(filePath: string): string {
-        if (filePath === '~') {
+        if (filePath === "~") {
             return os.homedir();
         }
 
-        if (filePath.startsWith('~/') || filePath.startsWith('~\\')) {
+        if (filePath.startsWith("~/") || filePath.startsWith("~\\")) {
             return path.join(os.homedir(), filePath.slice(2));
         }
 
@@ -127,27 +146,33 @@ export class EmulatorService {
     }
 
     private getAndroidAvdConfigContent(avdName: string): string | undefined {
-        const avdRoot = path.join(os.homedir(), '.android', 'avd');
+        const avdRoot = path.join(os.homedir(), ".android", "avd");
         const metadataPath = path.join(avdRoot, `${avdName}.ini`);
         let metadata: string | undefined;
 
         if (fs.existsSync(metadataPath)) {
-            metadata = fs.readFileSync(metadataPath, 'utf-8');
-            const absoluteAvdPath = this.getIniValue(metadata, 'path');
-            const relativeAvdPath = this.getIniValue(metadata, 'path.rel');
+            metadata = fs.readFileSync(metadataPath, "utf-8");
+            const absoluteAvdPath = this.getIniValue(metadata, "path");
+            const relativeAvdPath = this.getIniValue(metadata, "path.rel");
             const avdPath = absoluteAvdPath || relativeAvdPath;
             if (avdPath) {
-                const resolvedAvdPath = path.isAbsolute(avdPath) ? avdPath : path.join(os.homedir(), '.android', avdPath);
-                const configPath = path.join(resolvedAvdPath, 'config.ini');
+                const resolvedAvdPath = path.isAbsolute(avdPath)
+                    ? avdPath
+                    : path.join(os.homedir(), ".android", avdPath);
+                const configPath = path.join(resolvedAvdPath, "config.ini");
                 if (fs.existsSync(configPath)) {
-                    return `${metadata}\n${fs.readFileSync(configPath, 'utf-8')}`;
+                    return `${metadata}\n${fs.readFileSync(configPath, "utf-8")}`;
                 }
             }
         }
 
-        const directConfigPath = path.join(avdRoot, `${avdName}.avd`, 'config.ini');
+        const directConfigPath = path.join(
+            avdRoot,
+            `${avdName}.avd`,
+            "config.ini",
+        );
         if (fs.existsSync(directConfigPath)) {
-            return fs.readFileSync(directConfigPath, 'utf-8');
+            return fs.readFileSync(directConfigPath, "utf-8");
         }
 
         return metadata;
@@ -155,14 +180,17 @@ export class EmulatorService {
 
     private getIniValue(content: string, key: string): string | undefined {
         const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-        const match = new RegExp(String.raw`^${escapedKey}\s*=\s*(.+)$`, 'm').exec(content);
+        const match = new RegExp(
+            String.raw`^${escapedKey}\s*=\s*(.+)$`,
+            "m",
+        ).exec(content);
         return match?.[1].trim();
     }
 
     private getAndroidOsVersionFromConfig(content: string): string {
         const candidates = [
-            this.getIniValue(content, 'target'),
-            this.getIniValue(content, 'image.sysdir.1')
+            this.getIniValue(content, "target"),
+            this.getIniValue(content, "image.sysdir.1"),
         ].filter((value): value is string => !!value);
 
         for (const candidate of candidates) {
@@ -172,52 +200,70 @@ export class EmulatorService {
             }
         }
 
-        return 'Unknown';
+        return "Unknown";
     }
 
     public async getEmulators(): Promise<Emulator[]> {
         const [iosEmulators, androidEmulators] = await Promise.all([
             this.getIosEmulators(),
-            this.getAndroidEmulators()
+            this.getAndroidEmulators(),
         ]);
         return [...iosEmulators, ...androidEmulators];
     }
 
-    private executeFile(command: string, args: string[], options: CommandOptions = {}): Promise<string> {
-        this.log?.(`$ ${[command, ...args].map(arg => this.formatCommandArg(arg)).join(' ')}`);
+    private executeFile(
+        command: string,
+        args: string[],
+        options: CommandOptions = {},
+    ): Promise<string> {
+        this.log?.(
+            `$ ${[command, ...args].map((arg) => this.formatCommandArg(arg)).join(" ")}`,
+        );
         return new Promise((resolve, reject) => {
-            execFile(command, args, {
-                signal: options.signal,
-                timeout: options.timeoutMs ?? COMMAND_TIMEOUT_MS
-            }, (error, stdout, stderr) => {
-                if (error) {
-                    const commandError = error as NodeJS.ErrnoException & { killed?: boolean };
-                    let message = stderr.trim() || error.message;
-                    if (options.signal?.aborted || commandError.code === 'ABORT_ERR') {
-                        message = 'Operation cancelled.';
-                    } else if (commandError.killed) {
-                        message = `Command timed out after ${options.timeoutMs ?? COMMAND_TIMEOUT_MS} ms.`;
+            execFile(
+                command,
+                args,
+                {
+                    signal: options.signal,
+                    timeout: options.timeoutMs ?? COMMAND_TIMEOUT_MS,
+                },
+                (error, stdout, stderr) => {
+                    if (error) {
+                        const commandError = error as NodeJS.ErrnoException & {
+                            killed?: boolean;
+                        };
+                        let message = stderr.trim() || error.message;
+                        if (
+                            options.signal?.aborted ||
+                            commandError.code === "ABORT_ERR"
+                        ) {
+                            message = "Operation cancelled.";
+                        } else if (commandError.killed) {
+                            message = `Command timed out after ${options.timeoutMs ?? COMMAND_TIMEOUT_MS} ms.`;
+                        }
+                        this.log?.(`Command failed: ${message}`);
+                        reject(new Error(message));
+                    } else {
+                        this.logOutput(stdout);
+                        resolve(stdout);
                     }
-                    this.log?.(`Command failed: ${message}`);
-                    reject(new Error(message));
-                } else {
-                    this.logOutput(stdout);
-                    resolve(stdout);
-                }
-            });
+                },
+            );
         });
     }
 
     private spawnDetached(command: string, args: string[]): Promise<void> {
-        this.log?.(`$ ${[command, ...args].map(arg => this.formatCommandArg(arg)).join(' ')}`);
+        this.log?.(
+            `$ ${[command, ...args].map((arg) => this.formatCommandArg(arg)).join(" ")}`,
+        );
         return new Promise((resolve, reject) => {
             const child = spawn(command, args, {
                 detached: true,
-                stdio: 'ignore'
+                stdio: "ignore",
             });
 
-            child.once('error', reject);
-            child.once('spawn', () => {
+            child.once("error", reject);
+            child.once("spawn", () => {
                 child.unref();
                 resolve();
             });
@@ -235,24 +281,35 @@ export class EmulatorService {
         }
 
         const maxLength = 4000;
-        this.log?.(trimmedOutput.length > maxLength ? `${trimmedOutput.slice(0, maxLength)}...` : trimmedOutput);
+        this.log?.(
+            trimmedOutput.length > maxLength
+                ? `${trimmedOutput.slice(0, maxLength)}...`
+                : trimmedOutput,
+        );
     }
 
     private async getIosEmulators(): Promise<Emulator[]> {
         try {
-            const output = await this.executeFile('xcrun', ['simctl', 'list', 'devices', 'available', '--json']);
+            const output = await this.executeFile("xcrun", [
+                "simctl",
+                "list",
+                "devices",
+                "available",
+                "--json",
+            ]);
             const data = JSON.parse(output) as SimctlListDevicesResult;
             const emulators: Emulator[] = [];
 
             for (const [runtime, devices] of Object.entries(data.devices)) {
-                let osVersion = 'Unknown';
+                let osVersion = "Unknown";
                 const match = SIM_RUNTIME_VERSION_PATTERN.exec(runtime);
                 if (match) {
                     osVersion = `${match[1]} ${match[2]}.${match[3]}`;
                 } else {
-                    const matchFallback = SIM_RUNTIME_FALLBACK_PATTERN.exec(runtime);
+                    const matchFallback =
+                        SIM_RUNTIME_FALLBACK_PATTERN.exec(runtime);
                     if (matchFallback) {
-                        osVersion = matchFallback[1].replace(/-/g, '.');
+                        osVersion = matchFallback[1].replace(/-/g, ".");
                     }
                 }
 
@@ -260,15 +317,16 @@ export class EmulatorService {
                     emulators.push({
                         id: device.udid,
                         name: device.name,
-                        os: 'iOS',
+                        os: "iOS",
                         osVersion,
-                        state: device.state === 'Booted' ? 'running' : 'stopped'
+                        state:
+                            device.state === "Booted" ? "running" : "stopped",
                     });
                 }
             }
             return emulators;
         } catch (error) {
-            this.logError('Failed to fetch iOS emulators', error);
+            this.logError("Failed to fetch iOS emulators", error);
             return [];
         }
     }
@@ -276,10 +334,20 @@ export class EmulatorService {
     private async getAndroidEmulators(): Promise<Emulator[]> {
         try {
             const androidHome = this.getAndroidSdkPath();
-            const emulatorCommand = getAndroidToolPath(androidHome, 'emulator', 'emulator', process.platform);
+            const emulatorCommand = getAndroidToolPath(
+                androidHome,
+                "emulator",
+                "emulator",
+                process.platform,
+            );
 
-            const output = await this.executeFile(emulatorCommand, ['-list-avds']);
-            const avds = output.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const output = await this.executeFile(emulatorCommand, [
+                "-list-avds",
+            ]);
+            const avds = output
+                .split("\n")
+                .map((l) => l.trim())
+                .filter((l) => l.length > 0);
 
             const runningEmuNames = new Set<string>();
             try {
@@ -288,98 +356,149 @@ export class EmulatorService {
                     runningEmuNames.add(device.avdName);
                 }
             } catch (error) {
-                this.logError('Failed to list running Android emulators', error);
+                this.logError(
+                    "Failed to list running Android emulators",
+                    error,
+                );
             }
 
-            return avds.map(avd => {
-                let osVersion = 'Unknown';
+            return avds.map((avd) => {
+                let osVersion = "Unknown";
                 try {
                     const content = this.getAndroidAvdConfigContent(avd);
                     if (content) {
                         osVersion = this.getAndroidOsVersionFromConfig(content);
                     }
                 } catch (error) {
-                    this.logError(`Failed to read Android AVD configuration for ${avd}`, error);
+                    this.logError(
+                        `Failed to read Android AVD configuration for ${avd}`,
+                        error,
+                    );
                 }
 
                 return {
                     id: avd,
-                    name: avd.replace(/_/g, ' '),
-                    os: 'Android',
+                    name: avd.replace(/_/g, " "),
+                    os: "Android",
                     osVersion,
-                    state: runningEmuNames.has(avd) ? 'running' : 'stopped'
+                    state: runningEmuNames.has(avd) ? "running" : "stopped",
                 };
             });
         } catch (error) {
-            this.logError('Failed to fetch Android emulators', error);
+            this.logError("Failed to fetch Android emulators", error);
             return [];
         }
     }
 
-    public async startEmulator(emulator: Emulator, signal?: AbortSignal): Promise<void> {
-        if (emulator.os === 'iOS') {
-            await this.executeFile('xcrun', ['simctl', 'boot', emulator.id], { signal });
-            this.log?.(`Waiting for iOS Simulator ${emulator.name} to finish booting.`);
-            await this.executeFile('xcrun', ['simctl', 'bootstatus', emulator.id, '-b'], {
+    public async startEmulator(
+        emulator: Emulator,
+        signal?: AbortSignal,
+    ): Promise<void> {
+        if (emulator.os === "iOS") {
+            await this.executeFile("xcrun", ["simctl", "boot", emulator.id], {
                 signal,
-                timeoutMs: IOS_BOOT_COMPLETION_TIMEOUT_MS
             });
-            await this.executeFile('open', ['-a', 'Simulator'], { signal });
+            this.log?.(
+                `Waiting for iOS Simulator ${emulator.name} to finish booting.`,
+            );
+            await this.executeFile(
+                "xcrun",
+                ["simctl", "bootstatus", emulator.id, "-b"],
+                {
+                    signal,
+                    timeoutMs: IOS_BOOT_COMPLETION_TIMEOUT_MS,
+                },
+            );
+            await this.executeFile("open", ["-a", "Simulator"], { signal });
         } else {
             const androidHome = this.getAndroidSdkPath();
-            const emulatorCommand = getAndroidToolPath(androidHome, 'emulator', 'emulator', process.platform);
+            const emulatorCommand = getAndroidToolPath(
+                androidHome,
+                "emulator",
+                "emulator",
+                process.platform,
+            );
             this.throwIfCancelled(signal);
-            await this.spawnDetached(emulatorCommand, ['-avd', emulator.id]);
+            await this.spawnDetached(emulatorCommand, ["-avd", emulator.id]);
             const serial = await this.waitForAndroidDevice(emulator, signal);
             await this.waitForAndroidBootCompletion(emulator, serial, signal);
         }
     }
 
-    private async waitForAndroidDevice(emulator: Emulator, signal?: AbortSignal): Promise<string> {
+    private async waitForAndroidDevice(
+        emulator: Emulator,
+        signal?: AbortSignal,
+    ): Promise<string> {
         const deadline = Date.now() + ANDROID_DEVICE_DETECTION_TIMEOUT_MS;
 
-        this.log?.(`Waiting for Android Emulator ${emulator.name} to appear in ADB.`);
+        this.log?.(
+            `Waiting for Android Emulator ${emulator.name} to appear in ADB.`,
+        );
         while (Date.now() < deadline) {
             this.throwIfCancelled(signal);
-            const serial = await this.getRunningAndroidSerial(emulator.id, signal);
+            const serial = await this.getRunningAndroidSerial(
+                emulator.id,
+                signal,
+            );
             if (serial) {
-                this.log?.(`Android Emulator ${emulator.name} is available in ADB as ${serial}.`);
+                this.log?.(
+                    `Android Emulator ${emulator.name} is available in ADB as ${serial}.`,
+                );
                 return serial;
             }
 
             await this.sleep(STARTUP_POLL_INTERVAL_MS, signal);
         }
 
-        throw new Error(`Timed out waiting for ${emulator.name} to appear in ADB.`);
+        throw new Error(
+            `Timed out waiting for ${emulator.name} to appear in ADB.`,
+        );
     }
 
-    private async waitForAndroidBootCompletion(emulator: Emulator, serial: string, signal?: AbortSignal): Promise<void> {
+    private async waitForAndroidBootCompletion(
+        emulator: Emulator,
+        serial: string,
+        signal?: AbortSignal,
+    ): Promise<void> {
         const deadline = Date.now() + ANDROID_BOOT_COMPLETION_TIMEOUT_MS;
         const adbCommand = this.getAdbCommand();
 
-        this.log?.(`Waiting for Android Emulator ${emulator.name} to finish booting.`);
+        this.log?.(
+            `Waiting for Android Emulator ${emulator.name} to finish booting.`,
+        );
         while (Date.now() < deadline) {
             try {
                 this.throwIfCancelled(signal);
-                const bootCompleted = await this.executeFile(adbCommand, ['-s', serial, 'shell', 'getprop', 'sys.boot_completed'], { signal });
-                if (bootCompleted.trim() === '1') {
-                    this.log?.(`Android Emulator ${emulator.name} finished booting.`);
+                const bootCompleted = await this.executeFile(
+                    adbCommand,
+                    ["-s", serial, "shell", "getprop", "sys.boot_completed"],
+                    { signal },
+                );
+                if (bootCompleted.trim() === "1") {
+                    this.log?.(
+                        `Android Emulator ${emulator.name} finished booting.`,
+                    );
                     return;
                 }
             } catch (error) {
                 this.throwIfCancelled(signal);
-                this.logError(`Failed to check Android boot status for ${emulator.name}`, error);
+                this.logError(
+                    `Failed to check Android boot status for ${emulator.name}`,
+                    error,
+                );
             }
 
             await this.sleep(STARTUP_POLL_INTERVAL_MS, signal);
         }
 
-        throw new Error(`Timed out waiting for ${emulator.name} to finish booting.`);
+        throw new Error(
+            `Timed out waiting for ${emulator.name} to finish booting.`,
+        );
     }
 
     private throwIfCancelled(signal?: AbortSignal): void {
         if (signal?.aborted) {
-            throw new Error('Operation cancelled.');
+            throw new Error("Operation cancelled.");
         }
     }
 
@@ -389,41 +508,67 @@ export class EmulatorService {
 
             const onAbort = () => {
                 clearTimeout(timer);
-                reject(new Error('Operation cancelled.'));
+                reject(new Error("Operation cancelled."));
             };
             const timer = setTimeout(() => {
-                signal?.removeEventListener('abort', onAbort);
+                signal?.removeEventListener("abort", onAbort);
                 resolve();
             }, durationMs);
 
-            signal?.addEventListener('abort', onAbort, { once: true });
+            signal?.addEventListener("abort", onAbort, { once: true });
         });
     }
 
-    public async stopEmulator(emulator: Emulator, signal?: AbortSignal): Promise<void> {
-        if (emulator.os === 'iOS') {
-            await this.executeFile('xcrun', ['simctl', 'shutdown', emulator.id], { signal });
+    public async stopEmulator(
+        emulator: Emulator,
+        signal?: AbortSignal,
+    ): Promise<void> {
+        if (emulator.os === "iOS") {
+            await this.executeFile(
+                "xcrun",
+                ["simctl", "shutdown", emulator.id],
+                { signal },
+            );
         } else {
-            const serial = await this.getRunningAndroidSerial(emulator.id, signal);
+            const serial = await this.getRunningAndroidSerial(
+                emulator.id,
+                signal,
+            );
             if (!serial) {
-                throw new Error(`${emulator.name} is not running or its ADB serial could not be found.`);
+                throw new Error(
+                    `${emulator.name} is not running or its ADB serial could not be found.`,
+                );
             }
 
-            await this.executeFile(this.getAdbCommand(), ['-s', serial, 'emu', 'kill'], { signal });
+            await this.executeFile(
+                this.getAdbCommand(),
+                ["-s", serial, "emu", "kill"],
+                { signal },
+            );
         }
     }
 
-    public async installApp(emulator: Emulator, appPath: string, signal?: AbortSignal): Promise<void> {
-        if (emulator.os === 'Android') {
+    public async installApp(
+        emulator: Emulator,
+        appPath: string,
+        signal?: AbortSignal,
+    ): Promise<void> {
+        if (emulator.os === "Android") {
             await this.installAndroidApp(emulator, appPath, signal);
         } else {
             await this.installIosApp(emulator, appPath, signal);
         }
     }
 
-    private async installAndroidApp(emulator: Emulator, apkPath: string, signal?: AbortSignal): Promise<void> {
-        if (path.extname(apkPath).toLowerCase() !== '.apk') {
-            throw new Error('Please select an .apk file for Android emulators.');
+    private async installAndroidApp(
+        emulator: Emulator,
+        apkPath: string,
+        signal?: AbortSignal,
+    ): Promise<void> {
+        if (path.extname(apkPath).toLowerCase() !== ".apk") {
+            throw new Error(
+                "Please select an .apk file for Android emulators.",
+            );
         }
 
         const serial = await this.getRunningAndroidSerial(emulator.id, signal);
@@ -431,59 +576,100 @@ export class EmulatorService {
             throw new Error(`${emulator.name} is not running.`);
         }
 
-        await this.executeFile(this.getAdbCommand(), ['-s', serial, 'install', '-r', apkPath], {
-            signal,
-            timeoutMs: APP_INSTALL_TIMEOUT_MS
-        });
+        await this.executeFile(
+            this.getAdbCommand(),
+            ["-s", serial, "install", "-r", apkPath],
+            {
+                signal,
+                timeoutMs: APP_INSTALL_TIMEOUT_MS,
+            },
+        );
     }
 
-    private async installIosApp(emulator: Emulator, ipaPath: string, signal?: AbortSignal): Promise<void> {
-        if (path.extname(ipaPath).toLowerCase() !== '.ipa') {
-            throw new Error('Please select an .ipa file for iOS simulators.');
+    private async installIosApp(
+        emulator: Emulator,
+        ipaPath: string,
+        signal?: AbortSignal,
+    ): Promise<void> {
+        if (path.extname(ipaPath).toLowerCase() !== ".ipa") {
+            throw new Error("Please select an .ipa file for iOS simulators.");
         }
 
-        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vscode-emulator-ipa-'));
+        const tempDir = fs.mkdtempSync(
+            path.join(os.tmpdir(), "vscode-emulator-ipa-"),
+        );
         try {
-            await this.executeFile('/usr/bin/unzip', ['-q', ipaPath, '-d', tempDir], {
-                signal,
-                timeoutMs: APP_INSTALL_TIMEOUT_MS
-            });
-            const payloadDir = path.join(tempDir, 'Payload');
+            await this.executeFile(
+                "/usr/bin/unzip",
+                ["-q", ipaPath, "-d", tempDir],
+                {
+                    signal,
+                    timeoutMs: APP_INSTALL_TIMEOUT_MS,
+                },
+            );
+            const payloadDir = path.join(tempDir, "Payload");
             if (!fs.existsSync(payloadDir)) {
-                throw new Error('The selected .ipa does not contain a Payload directory.');
+                throw new Error(
+                    "The selected .ipa does not contain a Payload directory.",
+                );
             }
 
-            const appName = fs.readdirSync(payloadDir).find(entry => entry.toLowerCase().endsWith('.app'));
+            const appName = fs
+                .readdirSync(payloadDir)
+                .find((entry) => entry.toLowerCase().endsWith(".app"));
             if (!appName) {
-                throw new Error('The selected .ipa does not contain an app bundle.');
+                throw new Error(
+                    "The selected .ipa does not contain an app bundle.",
+                );
             }
 
-            await this.executeFile('xcrun', ['simctl', 'install', emulator.id, path.join(payloadDir, appName)], {
-                signal,
-                timeoutMs: APP_INSTALL_TIMEOUT_MS
-            });
+            await this.executeFile(
+                "xcrun",
+                [
+                    "simctl",
+                    "install",
+                    emulator.id,
+                    path.join(payloadDir, appName),
+                ],
+                {
+                    signal,
+                    timeoutMs: APP_INSTALL_TIMEOUT_MS,
+                },
+            );
         } finally {
             fs.rmSync(tempDir, { recursive: true, force: true });
         }
     }
 
-    public async getRunningAndroidSerial(avdName: string, signal?: AbortSignal): Promise<string | undefined> {
+    public async getRunningAndroidSerial(
+        avdName: string,
+        signal?: AbortSignal,
+    ): Promise<string | undefined> {
         const runningDevices = await this.getRunningAndroidDevices(signal);
-        return runningDevices.find(device => device.avdName === avdName)?.serial;
+        return runningDevices.find((device) => device.avdName === avdName)
+            ?.serial;
     }
 
-    private async getRunningAndroidDevices(signal?: AbortSignal): Promise<RunningAndroidDevice[]> {
+    private async getRunningAndroidDevices(
+        signal?: AbortSignal,
+    ): Promise<RunningAndroidDevice[]> {
         const adbCommand = this.getAdbCommand();
-        const adbOutput = await this.executeFile(adbCommand, ['devices'], { signal });
+        const adbOutput = await this.executeFile(adbCommand, ["devices"], {
+            signal,
+        });
         const devices: RunningAndroidDevice[] = [];
 
-        for (const line of adbOutput.split('\n')) {
+        for (const line of adbOutput.split("\n")) {
             const serial = this.getAdbDeviceSerial(line);
             if (!serial) {
                 continue;
             }
 
-            const avdName = await this.getAndroidAvdName(adbCommand, serial, signal);
+            const avdName = await this.getAndroidAvdName(
+                adbCommand,
+                serial,
+                signal,
+            );
             if (avdName) {
                 devices.push({ avdName, serial });
             }
@@ -493,17 +679,30 @@ export class EmulatorService {
     }
 
     private getAdbDeviceSerial(line: string): string | undefined {
-        const [serial, state] = line.split('\t');
-        return serial?.startsWith('emulator-') && state?.trim() === 'device' ? serial : undefined;
+        const [serial, state] = line.split("\t");
+        return serial?.startsWith("emulator-") && state?.trim() === "device"
+            ? serial
+            : undefined;
     }
 
-    private async getAndroidAvdName(adbCommand: string, serial: string, signal?: AbortSignal): Promise<string | undefined> {
+    private async getAndroidAvdName(
+        adbCommand: string,
+        serial: string,
+        signal?: AbortSignal,
+    ): Promise<string | undefined> {
         try {
-            const avdNameOut = await this.executeFile(adbCommand, ['-s', serial, 'emu', 'avd', 'name'], { signal });
-            return avdNameOut.split('\n')[0]?.trim() || undefined;
+            const avdNameOut = await this.executeFile(
+                adbCommand,
+                ["-s", serial, "emu", "avd", "name"],
+                { signal },
+            );
+            return avdNameOut.split("\n")[0]?.trim() || undefined;
         } catch (error) {
             this.throwIfCancelled(signal);
-            this.logError(`Failed to query Android AVD name for ${serial}`, error);
+            this.logError(
+                `Failed to query Android AVD name for ${serial}`,
+                error,
+            );
         }
 
         return undefined;
