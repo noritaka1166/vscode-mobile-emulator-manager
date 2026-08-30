@@ -2,6 +2,15 @@
 
 All notable changes to "Mobile Emulator Manager" will be documented in this file.
 
+## [0.3.1] - 2026-08-30
+
+### Changed
+- Refactored extension activation, command registration, emulator services, and the tree data provider to improve readability and maintainability
+- Standardized TypeScript imports, string literals, formatting, logging, and test style with Biome
+- Updated `@biomejs/biome` from 2.5.4 to 2.5.11 and aligned the Biome schema reference
+- Updated `esbuild` from 0.28.1 to 0.28.2
+- Updated transitive dependency `brace-expansion` from 2.1.2 to 2.1.4
+
 ## [0.3.0] - 2026-07-21
 
 ### Added
