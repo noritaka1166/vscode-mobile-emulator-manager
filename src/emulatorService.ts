@@ -4,6 +4,7 @@ import * as path from "node:path";
 import * as fs from "node:fs";
 import * as vscode from "vscode";
 import { getAndroidToolPath, getDefaultAndroidSdkPaths } from "./androidSdk";
+import { getIosSimulatorAppPath } from "./iosSimulator";
 
 const ANDROID_OS_VERSION_BY_API: Record<string, string> = {
     "37": "Android 17",
@@ -395,6 +396,14 @@ export class EmulatorService {
         signal?: AbortSignal,
     ): Promise<void> {
         if (emulator.os === "iOS") {
+            const developerDirectory = await this.executeFile(
+                "xcode-select",
+                ["--print-path"],
+                { signal },
+            );
+            const simulatorAppPath = getIosSimulatorAppPath(
+                developerDirectory.trim(),
+            );
             await this.executeFile("xcrun", ["simctl", "boot", emulator.id], {
                 signal,
             });
@@ -409,7 +418,9 @@ export class EmulatorService {
                     timeoutMs: IOS_BOOT_COMPLETION_TIMEOUT_MS,
                 },
             );
-            await this.executeFile("open", ["-a", "Simulator"], { signal });
+            await this.executeFile("open", ["-a", simulatorAppPath], {
+                signal,
+            });
         } else {
             const androidHome = this.getAndroidSdkPath();
             const emulatorCommand = getAndroidToolPath(

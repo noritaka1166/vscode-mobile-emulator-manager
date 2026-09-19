@@ -2,6 +2,11 @@
 
 All notable changes to "Mobile Emulator Manager" will be documented in this file.
 
+## [0.4.0] - 2026-09-20
+
+### Fixed
+- Open Device Hub on Xcode 27 and retain Simulator support on Xcode 26 and earlier, using the app bundled with the selected Xcode installation
+
 ## [0.3.1] - 2026-08-30
 
 ### Changed
