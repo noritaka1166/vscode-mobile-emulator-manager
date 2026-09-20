@@ -2,6 +2,17 @@
 
 All notable changes to "Mobile Emulator Manager" will be documented in this file.
 
+## [0.5.0] - 2026-09-21
+
+### Added
+- Added an Xcode Developer Path setting for selecting the Xcode installation used to manage iOS Simulators
+- Added Android Emulator cold boot support
+- Added configurable Android Emulator launch options, including reusable launch profiles
+- Added the ability to mark devices as favorites and pin them at the top of the device list
+
+### Changed
+- Updated `@biomejs/biome` from 2.5.11 to 2.5.14
+
 ## [0.4.0] - 2026-09-20
 
 ### Fixed
