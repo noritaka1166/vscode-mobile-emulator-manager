@@ -34,6 +34,7 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 ## Settings
 
 - **`mobileEmulatorManager.androidSdkPath`:** Optional path to your Android SDK. Use this when automatic detection through environment variables and platform defaults does not find your SDK.
+- **`mobileEmulatorManager.xcodeDeveloperPath`:** Optional path to Xcode's Developer directory, such as `/Applications/Xcode.app/Contents/Developer`. When empty, the extension uses the Xcode selected by `xcode-select --print-path`.
 
 ## Usage
 
@@ -53,6 +54,7 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 
 - If Android devices do not appear, make sure Android Studio, Android SDK, Android Emulator, and Android SDK Platform-Tools are installed.
 - If Android actions fail with an `adb` error, set `mobileEmulatorManager.androidSdkPath`, `ANDROID_SDK_ROOT`, or `ANDROID_HOME` to your Android SDK path, or add `adb` to your `PATH`.
+- If iOS actions fail because Xcode tools are unavailable, set `mobileEmulatorManager.xcodeDeveloperPath` to the desired Xcode Developer directory or update your `xcode-select` selection.
 - If iOS devices do not appear or fail to start, make sure Xcode is installed and `xcrun simctl` works from your terminal.
 - If app installation fails, select an `.apk` for Android and an `.ipa` containing a Simulator-installable `.app` for iOS Simulator.
 - If the device state looks stale, use the refresh button in the Devices view.

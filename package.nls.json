@@ -4,6 +4,7 @@
     "capabilities.untrustedWorkspaces.description": "Mobile Emulator Manager runs local Android SDK and Xcode command-line tools to list, start, stop, and install apps on emulators.",
     "configuration.title": "Mobile Emulator Manager",
     "configuration.androidSdkPath.markdownDescription": "Path to the Android SDK. When empty, the extension uses `ANDROID_SDK_ROOT`, `ANDROID_HOME`, or the platform default SDK location.",
+    "configuration.xcodeDeveloperPath.markdownDescription": "Path to Xcode's Developer directory, for example `/Applications/Xcode.app/Contents/Developer`. When empty, the extension uses `xcode-select --print-path`.",
     "viewsContainers.emulators.title": "Emulators",
     "views.devices.name": "Devices",
     "commands.refresh.title": "Refresh",

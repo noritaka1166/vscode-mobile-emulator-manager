@@ -76,6 +76,12 @@
           "default": "",
           "scope": "machine-overridable",
           "markdownDescription": "%configuration.androidSdkPath.markdownDescription%"
+        },
+        "mobileEmulatorManager.xcodeDeveloperPath": {
+          "type": "string",
+          "default": "",
+          "scope": "machine-overridable",
+          "markdownDescription": "%configuration.xcodeDeveloperPath.markdownDescription%"
         }
       }
     },

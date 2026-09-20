@@ -779,7 +779,7 @@ function getCauseGuide(details: string): string | undefined {
         ])
     ) {
         return vscode.l10n.t(
-            "Guide: Xcode command line tools were not found. Install Xcode and check your xcode-select configuration.",
+            "Guide: Xcode command line tools were not found. Install Xcode and check mobileEmulatorManager.xcodeDeveloperPath or your xcode-select configuration.",
         );
     }
 

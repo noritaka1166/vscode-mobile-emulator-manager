@@ -61,6 +61,7 @@ interface RunningAndroidDevice {
 interface CommandOptions {
     signal?: AbortSignal;
     timeoutMs?: number;
+    env?: NodeJS.ProcessEnv;
 }
 
 export class EmulatorService {
@@ -127,6 +128,33 @@ export class EmulatorService {
 
         const androidHome = process.env.ANDROID_HOME?.trim();
         return androidHome ? this.expandHome(androidHome) : undefined;
+    }
+
+    private getConfiguredXcodeDeveloperPath(): string | undefined {
+        const configuredPath = vscode.workspace
+            .getConfiguration("mobileEmulatorManager")
+            .get<string>("xcodeDeveloperPath")
+            ?.trim();
+
+        return configuredPath ? this.expandHome(configuredPath) : undefined;
+    }
+
+    private getXcrunEnvironment(): NodeJS.ProcessEnv | undefined {
+        const developerPath = this.getConfiguredXcodeDeveloperPath();
+        return developerPath
+            ? { ...process.env, DEVELOPER_DIR: developerPath }
+            : undefined;
+    }
+
+    private async getXcodeDeveloperPath(signal?: AbortSignal): Promise<string> {
+        const configuredPath = this.getConfiguredXcodeDeveloperPath();
+        if (configuredPath) {
+            return configuredPath;
+        }
+
+        return (
+            await this.executeFile("xcode-select", ["--print-path"], { signal })
+        ).trim();
     }
 
     private expandHome(filePath: string): string {
@@ -227,6 +255,7 @@ export class EmulatorService {
                 {
                     signal: options.signal,
                     timeout: options.timeoutMs ?? COMMAND_TIMEOUT_MS,
+                    env: options.env,
                 },
                 (error, stdout, stderr) => {
                     if (error) {
@@ -297,7 +326,7 @@ export class EmulatorService {
                 "devices",
                 "available",
                 "--json",
-            ]);
+            ], { env: this.getXcrunEnvironment() });
             const data = JSON.parse(output) as SimctlListDevicesResult;
             const emulators: Emulator[] = [];
 
@@ -396,16 +425,13 @@ export class EmulatorService {
         signal?: AbortSignal,
     ): Promise<void> {
         if (emulator.os === "iOS") {
-            const developerDirectory = await this.executeFile(
-                "xcode-select",
-                ["--print-path"],
-                { signal },
-            );
+            const developerDirectory = await this.getXcodeDeveloperPath(signal);
             const simulatorAppPath = getIosSimulatorAppPath(
-                developerDirectory.trim(),
+                developerDirectory,
             );
             await this.executeFile("xcrun", ["simctl", "boot", emulator.id], {
                 signal,
+                env: this.getXcrunEnvironment(),
             });
             this.log?.(
                 `Waiting for iOS Simulator ${emulator.name} to finish booting.`,
@@ -416,6 +442,7 @@ export class EmulatorService {
                 {
                     signal,
                     timeoutMs: IOS_BOOT_COMPLETION_TIMEOUT_MS,
+                    env: this.getXcrunEnvironment(),
                 },
             );
             await this.executeFile("open", ["-a", simulatorAppPath], {
@@ -538,7 +565,7 @@ export class EmulatorService {
             await this.executeFile(
                 "xcrun",
                 ["simctl", "shutdown", emulator.id],
-                { signal },
+                { signal, env: this.getXcrunEnvironment() },
             );
         } else {
             const serial = await this.getRunningAndroidSerial(
@@ -616,6 +643,7 @@ export class EmulatorService {
                 {
                     signal,
                     timeoutMs: APP_INSTALL_TIMEOUT_MS,
+                    env: this.getXcrunEnvironment(),
                 },
             );
             const payloadDir = path.join(tempDir, "Payload");

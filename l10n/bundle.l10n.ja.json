@@ -37,7 +37,7 @@
     "Unknown error.": "不明なエラーです。",
     "Guide: ADB was not found. Install Android SDK Platform-Tools, then set mobileEmulatorManager.androidSdkPath, ANDROID_SDK_ROOT, ANDROID_HOME, or add adb to PATH.": "ガイド: ADB が見つかりません。Android SDK Platform-Tools をインストールし、mobileEmulatorManager.androidSdkPath、ANDROID_SDK_ROOT、ANDROID_HOME を設定するか、adb を PATH に追加してください。",
     "Guide: The Android emulator command was not found. Install Android Emulator in Android Studio and make sure mobileEmulatorManager.androidSdkPath, ANDROID_SDK_ROOT, or ANDROID_HOME points to your SDK.": "ガイド: Android Emulator コマンドが見つかりません。Android Studio で Android Emulator をインストールし、mobileEmulatorManager.androidSdkPath、ANDROID_SDK_ROOT、または ANDROID_HOME が SDK を指していることを確認してください。",
-    "Guide: Xcode command line tools were not found. Install Xcode and check your xcode-select configuration.": "ガイド: Xcode command line tools が見つかりません。Xcode をインストールし、xcode-select の設定を確認してください。",
+    "Guide: Xcode command line tools were not found. Install Xcode and check mobileEmulatorManager.xcodeDeveloperPath or your xcode-select configuration.": "ガイド: Xcode command line tools が見つかりません。Xcode をインストールし、mobileEmulatorManager.xcodeDeveloperPath または xcode-select の設定を確認してください。",
     "Guide: The iOS Simulator could not boot. Check that the device is available in Xcode Devices and Simulators.": "ガイド: iOS Simulator を起動できませんでした。Xcode の「Devices and Simulators」で端末が利用可能か確認してください。",
     "Guide: Check that the target emulator is running, then refresh the device list and try again.": "ガイド: 対象のエミュレータが実行中か確認してから、端末一覧を更新してもう一度試してください。",
     "Guide: Select an .apk file for Android.": "ガイド: Android 用の .apk ファイルを選択してください。",

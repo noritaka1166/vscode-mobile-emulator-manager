@@ -34,6 +34,7 @@ VS Codeのサイドバーから、iOS SimulatorとAndroid Emulatorを一覧表�
 ## 設定
 
 - **`mobileEmulatorManager.androidSdkPath`:** Android SDKへの任意のパスです。環境変数やOSごとの既定パスでSDKが見つからない場合に指定してください。
+- **`mobileEmulatorManager.xcodeDeveloperPath`:** XcodeのDeveloperディレクトリへの任意のパスです。例: `/Applications/Xcode.app/Contents/Developer`。空欄の場合は、`xcode-select --print-path` で選択されているXcodeを使用します。
 
 ## 使い方
 
@@ -53,6 +54,7 @@ VS Codeのサイドバーから、iOS SimulatorとAndroid Emulatorを一覧表�
 
 - Android端末が表示されない場合は、Android Studio、Android SDK、Android Emulator、Android SDK Platform-Toolsがインストールされているか確認してください。
 - Android操作で `adb` エラーが出る場合は、`mobileEmulatorManager.androidSdkPath`、`ANDROID_SDK_ROOT`、または `ANDROID_HOME` にAndroid SDKのパスを設定するか、`adb` を `PATH` に追加してください。
+- iOS操作でXcodeツールが見つからない場合は、`mobileEmulatorManager.xcodeDeveloperPath` に使用するXcodeのDeveloperディレクトリを設定するか、`xcode-select` の選択を更新してください。
 - iOS端末が表示されない、または起動に失敗する場合は、Xcodeがインストールされていて、ターミナルから `xcrun simctl` を実行できるか確認してください。
 - アプリのインストールに失敗する場合は、Androidには `.apk`、iOS SimulatorにはSimulatorへインストール可能な `.app` を含む `.ipa` を選択してください。
 - 端末の状態表示が古い場合は、DevicesビューのRefreshボタンを押してください。
