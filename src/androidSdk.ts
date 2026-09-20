@@ -32,3 +32,12 @@ export function getAndroidToolPath(
     const executableName = platform === "win32" ? `${toolName}.exe` : toolName;
     return path.join(sdkPath, directory, executableName);
 }
+
+export function getAndroidEmulatorStartArgs(
+    avdName: string,
+    coldBoot = false,
+): string[] {
+    return coldBoot
+        ? ["-avd", avdName, "-no-snapshot-load"]
+        : ["-avd", avdName];
+}

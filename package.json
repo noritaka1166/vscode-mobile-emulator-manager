@@ -120,6 +120,16 @@
         "icon": "$(play)"
       },
       {
+        "command": "emulators.coldStart",
+        "title": "%commands.coldStart.title%",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "emulators.moreActions",
+        "title": "%commands.moreActions.title%",
+        "icon": "$(ellipsis)"
+      },
+      {
         "command": "emulators.quickStartAndInstallApp",
         "title": "%commands.quickStartAndInstallApp.title%",
         "icon": "$(run-all)"
@@ -176,7 +186,7 @@
           "group": "inline@1"
         },
         {
-          "command": "emulators.startAndInstallApp",
+          "command": "emulators.moreActions",
           "when": "view == emulatorsView && viewItem =~ /stopped$/",
           "group": "inline@2"
         },

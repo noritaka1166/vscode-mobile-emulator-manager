@@ -3,7 +3,11 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import * as vscode from "vscode";
-import { getAndroidToolPath, getDefaultAndroidSdkPaths } from "./androidSdk";
+import {
+    getAndroidEmulatorStartArgs,
+    getAndroidToolPath,
+    getDefaultAndroidSdkPaths,
+} from "./androidSdk";
 import { getIosSimulatorAppPath } from "./iosSimulator";
 
 const ANDROID_OS_VERSION_BY_API: Record<string, string> = {
@@ -320,13 +324,11 @@ export class EmulatorService {
 
     private async getIosEmulators(): Promise<Emulator[]> {
         try {
-            const output = await this.executeFile("xcrun", [
-                "simctl",
-                "list",
-                "devices",
-                "available",
-                "--json",
-            ], { env: this.getXcrunEnvironment() });
+            const output = await this.executeFile(
+                "xcrun",
+                ["simctl", "list", "devices", "available", "--json"],
+                { env: this.getXcrunEnvironment() },
+            );
             const data = JSON.parse(output) as SimctlListDevicesResult;
             const emulators: Emulator[] = [];
 
@@ -423,12 +425,11 @@ export class EmulatorService {
     public async startEmulator(
         emulator: Emulator,
         signal?: AbortSignal,
+        coldBoot = false,
     ): Promise<void> {
         if (emulator.os === "iOS") {
             const developerDirectory = await this.getXcodeDeveloperPath(signal);
-            const simulatorAppPath = getIosSimulatorAppPath(
-                developerDirectory,
-            );
+            const simulatorAppPath = getIosSimulatorAppPath(developerDirectory);
             await this.executeFile("xcrun", ["simctl", "boot", emulator.id], {
                 signal,
                 env: this.getXcrunEnvironment(),
@@ -457,7 +458,10 @@ export class EmulatorService {
                 process.platform,
             );
             this.throwIfCancelled(signal);
-            await this.spawnDetached(emulatorCommand, ["-avd", emulator.id]);
+            await this.spawnDetached(
+                emulatorCommand,
+                getAndroidEmulatorStartArgs(emulator.id, coldBoot),
+            );
             const serial = await this.waitForAndroidDevice(emulator, signal);
             await this.waitForAndroidBootCompletion(emulator, serial, signal);
         }

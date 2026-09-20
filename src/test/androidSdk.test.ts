@@ -1,7 +1,11 @@
 import { deepEqual, equal } from "node:assert/strict";
 import * as path from "node:path";
 import { test } from "node:test";
-import { getAndroidToolPath, getDefaultAndroidSdkPaths } from "../androidSdk";
+import {
+    getAndroidEmulatorStartArgs,
+    getAndroidToolPath,
+    getDefaultAndroidSdkPaths,
+} from "../androidSdk";
 
 test("macOS uses the standard Android SDK path", () => {
     deepEqual(getDefaultAndroidSdkPaths("darwin", "/Users/example"), [
@@ -42,4 +46,13 @@ test("Unix tools do not use a file extension", () => {
         getAndroidToolPath("/sdk", "emulator", "emulator", "linux"),
         path.join("/sdk", "emulator", "emulator"),
     );
+});
+
+test("cold boot disables loading the AVD snapshot", () => {
+    deepEqual(getAndroidEmulatorStartArgs("Pixel_9", true), [
+        "-avd",
+        "Pixel_9",
+        "-no-snapshot-load",
+    ]);
+    deepEqual(getAndroidEmulatorStartArgs("Pixel_9"), ["-avd", "Pixel_9"]);
 });

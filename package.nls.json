@@ -10,6 +10,8 @@
     "commands.refresh.title": "Refresh",
     "commands.start.title": "Start",
     "commands.quickStart.title": "Mobile Emulator Manager: Start Device...",
+    "commands.coldStart.title": "Mobile Emulator Manager: Cold Boot Android Device...",
+    "commands.moreActions.title": "More Actions...",
     "commands.quickStartAndInstallApp.title": "Mobile Emulator Manager: Start and Install App...",
     "commands.quickInstallLastApp.title": "Mobile Emulator Manager: Install Last App...",
     "commands.stop.title": "Stop",

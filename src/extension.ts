@@ -70,6 +70,70 @@ export function activate(context: vscode.ExtensionContext): void {
             );
         }),
         vscode.commands.registerCommand(
+            "emulators.coldStart",
+            async (node?: EmulatorTreeItem) => {
+                const emulator =
+                    node?.emulator ||
+                    (await selectEmulatorByState(
+                        emulatorService,
+                        "stopped",
+                        vscode.l10n.t("cold boot"),
+                        outputChannel,
+                        "Android",
+                    ));
+                if (emulator?.os !== "Android") {
+                    return;
+                }
+
+                await startEmulatorWithProgress(
+                    emulator,
+                    emulatorService,
+                    treeDataProvider,
+                    outputChannel,
+                    true,
+                );
+            },
+        ),
+        vscode.commands.registerCommand(
+            "emulators.moreActions",
+            async (node?: EmulatorTreeItem) => {
+                const emulator = node?.emulator;
+                if (emulator?.state !== "stopped") {
+                    return;
+                }
+
+                const actions: Array<{
+                    label: string;
+                    description: string;
+                    command: string;
+                }> = [
+                    {
+                        label: vscode.l10n.t("Start and Install App..."),
+                        description: vscode.l10n.t(
+                            "Start this device, then select an app to install.",
+                        ),
+                        command: "emulators.startAndInstallApp",
+                    },
+                ];
+                if (emulator.os === "Android") {
+                    actions.unshift({
+                        label: vscode.l10n.t("Cold Boot"),
+                        description: vscode.l10n.t(
+                            "Start without loading the saved snapshot.",
+                        ),
+                        command: "emulators.coldStart",
+                    });
+                }
+
+                const action = await vscode.window.showQuickPick(actions, {
+                    placeHolder: vscode.l10n.t("Select an action"),
+                });
+                if (action) {
+                    await vscode.commands.executeCommand(action.command, node);
+                }
+            },
+        ),
+        vscode.commands.registerCommand(
             "emulators.quickStartAndInstallApp",
             async () => {
                 const emulator = await selectEmulatorByState(
@@ -377,6 +441,7 @@ async function selectEmulatorByState(
     state: EmulatorState,
     actionLabel: string,
     outputChannel: vscode.OutputChannel,
+    os?: Emulator["os"],
 ): Promise<Emulator | undefined> {
     logOutput(outputChannel, `Loading devices to ${actionLabel}.`);
     let emulators: Emulator[];
@@ -403,32 +468,23 @@ async function selectEmulatorByState(
         return undefined;
     }
 
-    const selectedOs = await vscode.window.showQuickPick(
-        [
-            {
-                label: "Android",
-                description: vscode.l10n.t(
-                    "{0} {1}",
-                    stateEmulators.filter(
-                        (emulator) => emulator.os === "Android",
-                    ).length,
-                    stateLabel,
-                ),
-            },
-            {
-                label: "iOS",
-                description: vscode.l10n.t(
-                    "{0} {1}",
-                    stateEmulators.filter((emulator) => emulator.os === "iOS")
-                        .length,
-                    stateLabel,
-                ),
-            },
-        ],
-        {
-            placeHolder: vscode.l10n.t("Select a platform"),
-        },
-    );
+    const selectedOs = os
+        ? { label: os }
+        : await vscode.window.showQuickPick(
+              ["Android", "iOS"].map((platform) => ({
+                  label: platform as Emulator["os"],
+                  description: vscode.l10n.t(
+                      "{0} {1}",
+                      stateEmulators.filter(
+                          (emulator) => emulator.os === platform,
+                      ).length,
+                      stateLabel,
+                  ),
+              })),
+              {
+                  placeHolder: vscode.l10n.t("Select a platform"),
+              },
+          );
 
     if (!selectedOs) {
         return undefined;
@@ -511,36 +567,56 @@ async function startEmulatorWithProgress(
     emulatorService: EmulatorService,
     treeDataProvider: EmulatorTreeDataProvider,
     outputChannel: vscode.OutputChannel,
+    coldBoot = false,
 ): Promise<void> {
     await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: vscode.l10n.t("Starting {0}...", emulator.name),
+            title: coldBoot
+                ? vscode.l10n.t("Cold booting {0}...", emulator.name)
+                : vscode.l10n.t("Starting {0}...", emulator.name),
             cancellable: true,
         },
         async (_progress, cancellationToken) => {
             await withCancellation(cancellationToken, async (signal) => {
                 logOutput(
                     outputChannel,
-                    `Starting ${formatEmulator(emulator)}.`,
+                    `${coldBoot ? "Cold booting" : "Starting"} ${formatEmulator(emulator)}.`,
                 );
                 try {
-                    await emulatorService.startEmulator(emulator, signal);
+                    await emulatorService.startEmulator(
+                        emulator,
+                        signal,
+                        coldBoot,
+                    );
                     logOutput(
                         outputChannel,
-                        `Started ${formatEmulator(emulator)} successfully.`,
+                        `${coldBoot ? "Cold booted" : "Started"} ${formatEmulator(emulator)} successfully.`,
                     );
                     showInformationMessage(
-                        vscode.l10n.t(
-                            "Started {0} successfully.",
-                            emulator.name,
-                        ),
+                        coldBoot
+                            ? vscode.l10n.t(
+                                  "Cold booted {0} successfully.",
+                                  emulator.name,
+                              )
+                            : vscode.l10n.t(
+                                  "Started {0} successfully.",
+                                  emulator.name,
+                              ),
                     );
                     treeDataProvider.refresh();
                 } catch (error: unknown) {
                     reportError(
                         outputChannel,
-                        vscode.l10n.t("Failed to start {0}", emulator.name),
+                        coldBoot
+                            ? vscode.l10n.t(
+                                  "Failed to cold boot {0}",
+                                  emulator.name,
+                              )
+                            : vscode.l10n.t(
+                                  "Failed to start {0}",
+                                  emulator.name,
+                              ),
                         error,
                     );
                 }
