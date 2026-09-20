@@ -1,11 +1,12 @@
+import { randomBytes } from "node:crypto";
 import * as vscode from "vscode";
 import {
     ANDROID_GPU_MODES,
     type AndroidLaunchOptions,
     type AndroidLaunchProfile,
     getAndroidLaunchProfiles,
-    normalizeAndroidLaunchProfileName,
     normalizeAndroidLaunchOptions,
+    normalizeAndroidLaunchProfileName,
 } from "./androidSdk";
 import { type Emulator, EmulatorService } from "./emulatorService";
 import { getFavoriteEmulatorKey, getFavoriteEmulatorKeys } from "./favorites";
@@ -58,7 +59,7 @@ export function activate(context: vscode.ExtensionContext): void {
         }
         await context.globalState.update(
             FAVORITE_EMULATOR_KEYS,
-            Array.from(favoriteEmulatorKeys).sort(),
+            Array.from(favoriteEmulatorKeys).sort((a, b) => a.localeCompare(b)),
         );
         treeDataProvider.setFavoriteEmulatorKeys(favoriteEmulatorKeys);
     };
@@ -732,7 +733,7 @@ function getAndroidLaunchOptionsHtml(
     options: AndroidLaunchOptions,
     profiles: AndroidLaunchProfile[],
 ): string {
-    const nonce = Math.random().toString(36).slice(2);
+    const nonce = randomBytes(16).toString("base64url");
     const labels = {
         title: vscode.l10n.t("Android Launch Options"),
         description: vscode.l10n.t(
@@ -764,14 +765,20 @@ function getAndroidLaunchOptionsHtml(
         deleteProfile: vscode.l10n.t("Delete profile"),
         profileNameRequired: vscode.l10n.t("Enter a profile name."),
     };
-    const serializedOptions = JSON.stringify(options).replace(/</g, "\\u003c");
-    const serializedLabels = JSON.stringify(labels).replace(/</g, "\\u003c");
+    const serializedOptions = JSON.stringify(options).replace(
+        /</g,
+        String.raw`\u003c`,
+    );
+    const serializedLabels = JSON.stringify(labels).replace(
+        /</g,
+        String.raw`\u003c`,
+    );
     const serializedProfiles = JSON.stringify(profiles).replace(
         /</g,
-        "\\u003c",
+        String.raw`\u003c`,
     );
 
-    return `<!DOCTYPE html>
+    return String.raw`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -847,8 +854,8 @@ function getAndroidLaunchOptionsHtml(
     const gpuMode = document.getElementById('gpuMode');
     const modes = ${JSON.stringify(ANDROID_GPU_MODES)};
     modes.forEach((mode) => { const option = document.createElement('option'); option.value = mode; option.textContent = mode === 'default' ? labels.defaultGpu : mode; gpuMode.append(option); });
-    const applyOptions = (value) => { document.getElementById('coldBoot').checked = value.coldBoot; document.getElementById('disableBootAnimation').checked = value.disableBootAnimation; document.getElementById('disableAudio').checked = value.disableAudio; gpuMode.value = value.gpuMode; document.getElementById('memoryMb').value = value.memoryMb || ''; document.getElementById('additionalArgs').value = value.additionalArgs.join('\\n'); };
-    const readOptions = () => ({ coldBoot: document.getElementById('coldBoot').checked, disableBootAnimation: document.getElementById('disableBootAnimation').checked, disableAudio: document.getElementById('disableAudio').checked, gpuMode: gpuMode.value, memoryMb: document.getElementById('memoryMb').value === '' ? undefined : Number(document.getElementById('memoryMb').value), additionalArgs: document.getElementById('additionalArgs').value.split('\\n').map((value) => value.trim()).filter(Boolean) });
+    const applyOptions = (value) => { document.getElementById('coldBoot').checked = value.coldBoot; document.getElementById('disableBootAnimation').checked = value.disableBootAnimation; document.getElementById('disableAudio').checked = value.disableAudio; gpuMode.value = value.gpuMode; document.getElementById('memoryMb').value = value.memoryMb || ''; document.getElementById('additionalArgs').value = value.additionalArgs.join('\n'); };
+    const readOptions = () => ({ coldBoot: document.getElementById('coldBoot').checked, disableBootAnimation: document.getElementById('disableBootAnimation').checked, disableAudio: document.getElementById('disableAudio').checked, gpuMode: gpuMode.value, memoryMb: document.getElementById('memoryMb').value === '' ? undefined : Number(document.getElementById('memoryMb').value), additionalArgs: document.getElementById('additionalArgs').value.split('\n').map((value) => value.trim()).filter(Boolean) });
     const profileSelect = document.getElementById('profileSelect');
     const updateProfiles = (selectedProfileName) => { profileSelect.textContent = ''; const defaultOption = document.createElement('option'); defaultOption.value = ''; defaultOption.textContent = labels.savedDefault; profileSelect.append(defaultOption); profiles.forEach((profile) => { const option = document.createElement('option'); option.value = profile.name; option.textContent = profile.name; profileSelect.append(option); }); profileSelect.value = selectedProfileName || ''; document.getElementById('deleteProfile').disabled = !selectedProfileName; };
     updateProfiles(); applyOptions(options);

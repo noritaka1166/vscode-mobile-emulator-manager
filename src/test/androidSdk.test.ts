@@ -2,8 +2,8 @@ import { deepEqual, equal } from "node:assert/strict";
 import * as path from "node:path";
 import { test } from "node:test";
 import {
-    getAndroidLaunchProfiles,
     getAndroidEmulatorStartArgs,
+    getAndroidLaunchProfiles,
     getAndroidToolPath,
     getDefaultAndroidSdkPaths,
 } from "../androidSdk";

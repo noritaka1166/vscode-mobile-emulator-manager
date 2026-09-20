@@ -10,7 +10,7 @@ export const ANDROID_GPU_MODES = [
     "swangle",
 ] as const;
 
-export type AndroidGpuMode = (typeof ANDROID_GPU_MODES)[number];
+type AndroidGpuMode = (typeof ANDROID_GPU_MODES)[number];
 
 export interface AndroidLaunchOptions {
     coldBoot: boolean;
