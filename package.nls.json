@@ -16,6 +16,7 @@
     "commands.coldStart.title": "Mobile Emulator Manager: Cold Boot Android Device...",
     "commands.moreActions.title": "More Actions...",
     "commands.startWithLaunchOptions.title": "Mobile Emulator Manager: Start Android Device with Launch Options...",
+    "commands.startWithLaunchProfile.title": "Mobile Emulator Manager: Start Android Device with Launch Profile...",
     "commands.quickStartAndInstallApp.title": "Mobile Emulator Manager: Start and Install App...",
     "commands.quickInstallLastApp.title": "Mobile Emulator Manager: Install Last App...",
     "commands.stop.title": "Stop",

@@ -21,6 +21,11 @@ export interface AndroidLaunchOptions {
     additionalArgs: string[];
 }
 
+export interface AndroidLaunchProfile {
+    name: string;
+    options: AndroidLaunchOptions;
+}
+
 export const DEFAULT_ANDROID_LAUNCH_OPTIONS: AndroidLaunchOptions = {
     coldBoot: false,
     disableBootAnimation: false,
@@ -59,6 +64,45 @@ export function normalizeAndroidLaunchOptions(
                   .filter((arg) => arg.length > 0 && arg !== "-avd")
             : [],
     };
+}
+
+export function normalizeAndroidLaunchProfileName(
+    value: unknown,
+): string | undefined {
+    if (typeof value !== "string") {
+        return undefined;
+    }
+
+    const name = value.trim();
+    return name.length > 0 && name.length <= 64 ? name : undefined;
+}
+
+export function getAndroidLaunchProfiles(
+    value: unknown,
+): AndroidLaunchProfile[] {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    const profiles = new Map<string, AndroidLaunchProfile>();
+    for (const valueItem of value) {
+        if (typeof valueItem !== "object" || valueItem === null) {
+            continue;
+        }
+
+        const item = valueItem as { name?: unknown; options?: unknown };
+        const name = normalizeAndroidLaunchProfileName(item.name);
+        if (name) {
+            profiles.set(name.toLocaleLowerCase(), {
+                name,
+                options: normalizeAndroidLaunchOptions(item.options),
+            });
+        }
+    }
+
+    return Array.from(profiles.values()).sort((left, right) =>
+        left.name.localeCompare(right.name),
+    );
 }
 
 export function getDefaultAndroidSdkPaths(

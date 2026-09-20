@@ -12,6 +12,7 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 - **Start Devices:** Boot up your simulator/emulator with a single click. A loading indicator will appear, ensuring the device is fully booted and recognized before the status updates.
 - **Cold Boot Android Devices:** Start a stopped Android emulator without loading its snapshot, which helps recover from corrupted snapshots or boot loops.
 - **Android Launch Options:** Select startup options for a stopped Android emulator, including Cold Boot, boot animation, audio, GPU mode, memory, and additional arguments. Saved options become the default for future starts.
+- **Android Launch Profiles:** Save multiple named launch-option sets and start an Android emulator with the selected profile.
 - **Timeouts and Cancellation:** Start, stop, and install operations can be cancelled from their progress notification. Commands time out automatically instead of leaving the operation running indefinitely. Cancelling an Android start stops waiting for boot completion, but an emulator that has already launched continues starting in the background.
 - **Localized UI:** Runtime messages, commands, views, and settings follow the VS Code display language, with English and Japanese translations included.
 - **Quick Start from Command Palette:** Run **Mobile Emulator Manager: Start Device...** to choose Android or iOS, then start a stopped device without opening the sidebar.

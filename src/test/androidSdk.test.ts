@@ -2,6 +2,7 @@ import { deepEqual, equal } from "node:assert/strict";
 import * as path from "node:path";
 import { test } from "node:test";
 import {
+    getAndroidLaunchProfiles,
     getAndroidEmulatorStartArgs,
     getAndroidToolPath,
     getDefaultAndroidSdkPaths,
@@ -78,4 +79,26 @@ test("launch options map to Android Emulator arguments", () => {
             "-no-snapshot-save",
         ],
     );
+});
+
+test("launch profiles keep one profile for each case-insensitive name", () => {
+    const profiles = getAndroidLaunchProfiles([
+        { name: "Light", options: { disableAudio: true } },
+        { name: "light", options: { coldBoot: true } },
+        { name: "", options: {} },
+    ]);
+
+    deepEqual(profiles, [
+        {
+            name: "light",
+            options: {
+                coldBoot: true,
+                disableBootAnimation: false,
+                disableAudio: false,
+                gpuMode: "default",
+                memoryMb: undefined,
+                additionalArgs: [],
+            },
+        },
+    ]);
 });

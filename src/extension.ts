@@ -2,6 +2,9 @@ import * as vscode from "vscode";
 import {
     ANDROID_GPU_MODES,
     type AndroidLaunchOptions,
+    type AndroidLaunchProfile,
+    getAndroidLaunchProfiles,
+    normalizeAndroidLaunchProfileName,
     normalizeAndroidLaunchOptions,
 } from "./androidSdk";
 import { type Emulator, EmulatorService } from "./emulatorService";
@@ -14,6 +17,7 @@ import {
 const LAST_ANDROID_APP_PATH_KEY = "lastAndroidAppPath";
 const LAST_IOS_APP_PATH_KEY = "lastIosAppPath";
 const ANDROID_LAUNCH_OPTIONS_KEY = "androidLaunchOptions";
+const ANDROID_LAUNCH_PROFILES_KEY = "androidLaunchProfiles";
 const FAVORITE_EMULATOR_KEYS = "favoriteEmulatorKeys";
 
 type EmulatorState = Emulator["state"];
@@ -161,6 +165,11 @@ export function activate(context: vscode.ExtensionContext): void {
                     },
                 ];
                 if (emulator.os === "Android") {
+                    const profiles = getAndroidLaunchProfiles(
+                        context.globalState.get<unknown>(
+                            ANDROID_LAUNCH_PROFILES_KEY,
+                        ),
+                    );
                     actions.unshift(
                         {
                             label: vscode.l10n.t(
@@ -179,6 +188,15 @@ export function activate(context: vscode.ExtensionContext): void {
                             command: "emulators.coldStart",
                         },
                     );
+                    if (profiles.length > 0) {
+                        actions.unshift({
+                            label: vscode.l10n.t("Start with Profile..."),
+                            description: vscode.l10n.t(
+                                "Choose a saved Android launch profile.",
+                            ),
+                            command: "emulators.startWithLaunchProfile",
+                        });
+                    }
                 }
 
                 const action = await vscode.window.showQuickPick(actions, {
@@ -192,7 +210,16 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand(
             "emulators.startWithLaunchOptions",
             async (node?: EmulatorTreeItem) => {
-                if (node?.emulator?.os !== "Android") {
+                const emulator =
+                    node?.emulator ||
+                    (await selectEmulatorByState(
+                        emulatorService,
+                        "stopped",
+                        vscode.l10n.t("start with launch options"),
+                        outputChannel,
+                        "Android",
+                    ));
+                if (emulator?.os !== "Android") {
                     return;
                 }
 
@@ -206,11 +233,57 @@ export function activate(context: vscode.ExtensionContext): void {
                 }
 
                 await startEmulatorWithProgress(
-                    node.emulator,
+                    emulator,
                     emulatorService,
                     treeDataProvider,
                     outputChannel,
                     launchOptions,
+                );
+            },
+        ),
+        vscode.commands.registerCommand(
+            "emulators.startWithLaunchProfile",
+            async (node?: EmulatorTreeItem) => {
+                const emulator =
+                    node?.emulator ||
+                    (await selectEmulatorByState(
+                        emulatorService,
+                        "stopped",
+                        vscode.l10n.t("start with profile"),
+                        outputChannel,
+                        "Android",
+                    ));
+                if (emulator?.os !== "Android") {
+                    return;
+                }
+
+                const profiles = getAndroidLaunchProfiles(
+                    context.globalState.get<unknown>(
+                        ANDROID_LAUNCH_PROFILES_KEY,
+                    ),
+                );
+                const selected = await vscode.window.showQuickPick(
+                    profiles.map((profile) => ({
+                        label: profile.name,
+                        description: formatAndroidLaunchProfile(
+                            profile.options,
+                        ),
+                        profile,
+                    })),
+                    {
+                        placeHolder: vscode.l10n.t("Select a launch profile"),
+                    },
+                );
+                if (!selected) {
+                    return;
+                }
+
+                await startEmulatorWithProgress(
+                    emulator,
+                    emulatorService,
+                    treeDataProvider,
+                    outputChannel,
+                    selected.profile.options,
                 );
             },
         ),
@@ -517,12 +590,46 @@ function formatEmulator(emulator: Emulator): string {
     return `${emulator.name} (${emulator.os}, ${emulator.id})`;
 }
 
+function formatAndroidLaunchProfile(options: AndroidLaunchOptions): string {
+    const details: string[] = [];
+    if (options.coldBoot) {
+        details.push(vscode.l10n.t("Cold Boot"));
+    }
+    if (options.disableBootAnimation) {
+        details.push(vscode.l10n.t("No boot animation"));
+    }
+    if (options.disableAudio) {
+        details.push(vscode.l10n.t("No audio"));
+    }
+    if (options.gpuMode !== "default") {
+        details.push(`GPU: ${options.gpuMode}`);
+    }
+    if (options.memoryMb) {
+        details.push(vscode.l10n.t("{0} MB", options.memoryMb));
+    }
+    if (options.additionalArgs.length > 0) {
+        details.push(
+            vscode.l10n.t(
+                "{0} additional arguments",
+                options.additionalArgs.length,
+            ),
+        );
+    }
+
+    return details.length > 0
+        ? details.join(" · ")
+        : vscode.l10n.t("Default settings");
+}
+
 async function selectAndroidLaunchOptions(
     context: vscode.ExtensionContext,
     onSaveAsDefault: (options: AndroidLaunchOptions) => void,
 ): Promise<AndroidLaunchOptions | undefined> {
     const initialOptions = normalizeAndroidLaunchOptions(
         context.globalState.get<unknown>(ANDROID_LAUNCH_OPTIONS_KEY),
+    );
+    let profiles = getAndroidLaunchProfiles(
+        context.globalState.get<unknown>(ANDROID_LAUNCH_PROFILES_KEY),
     );
     const panel = vscode.window.createWebviewPanel(
         "androidLaunchOptions",
@@ -534,6 +641,7 @@ async function selectAndroidLaunchOptions(
     panel.webview.html = getAndroidLaunchOptionsHtml(
         panel.webview,
         initialOptions,
+        profiles,
     );
 
     return new Promise((resolve) => {
@@ -557,12 +665,52 @@ async function selectAndroidLaunchOptions(
                 type?: unknown;
                 options?: unknown;
                 saveAsDefault?: unknown;
+                profileName?: unknown;
             };
             if (data.type === "cancel") {
                 finish();
                 return;
             }
             if (data.type !== "start") {
+                const profileName = normalizeAndroidLaunchProfileName(
+                    data.profileName,
+                );
+                if (data.type === "saveProfile" && profileName) {
+                    const options = normalizeAndroidLaunchOptions(data.options);
+                    profiles = [
+                        ...profiles.filter(
+                            (profile) =>
+                                profile.name.toLocaleLowerCase() !==
+                                profileName.toLocaleLowerCase(),
+                        ),
+                        { name: profileName, options },
+                    ].sort((left, right) =>
+                        left.name.localeCompare(right.name),
+                    );
+                    await context.globalState.update(
+                        ANDROID_LAUNCH_PROFILES_KEY,
+                        profiles,
+                    );
+                    await panel.webview.postMessage({
+                        type: "profilesUpdated",
+                        profiles,
+                        selectedProfileName: profileName,
+                    });
+                } else if (data.type === "deleteProfile" && profileName) {
+                    profiles = profiles.filter(
+                        (profile) =>
+                            profile.name.toLocaleLowerCase() !==
+                            profileName.toLocaleLowerCase(),
+                    );
+                    await context.globalState.update(
+                        ANDROID_LAUNCH_PROFILES_KEY,
+                        profiles,
+                    );
+                    await panel.webview.postMessage({
+                        type: "profilesUpdated",
+                        profiles,
+                    });
+                }
                 return;
             }
 
@@ -582,6 +730,7 @@ async function selectAndroidLaunchOptions(
 function getAndroidLaunchOptionsHtml(
     webview: vscode.Webview,
     options: AndroidLaunchOptions,
+    profiles: AndroidLaunchProfile[],
 ): string {
     const nonce = Math.random().toString(36).slice(2);
     const labels = {
@@ -608,9 +757,19 @@ function getAndroidLaunchOptionsHtml(
         memoryError: vscode.l10n.t(
             "Memory must be an integer from 1536 to 8192.",
         ),
+        profile: vscode.l10n.t("Launch profile"),
+        savedDefault: vscode.l10n.t("Saved default"),
+        profileName: vscode.l10n.t("Profile name"),
+        saveProfile: vscode.l10n.t("Save profile"),
+        deleteProfile: vscode.l10n.t("Delete profile"),
+        profileNameRequired: vscode.l10n.t("Enter a profile name."),
     };
     const serializedOptions = JSON.stringify(options).replace(/</g, "\\u003c");
     const serializedLabels = JSON.stringify(labels).replace(/</g, "\\u003c");
+    const serializedProfiles = JSON.stringify(profiles).replace(
+        /</g,
+        "\\u003c",
+    );
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -628,6 +787,8 @@ function getAndroidLaunchOptionsHtml(
     input, select, textarea { background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); color: var(--vscode-input-foreground); font: inherit; padding: 6px; }
     textarea { min-height: 92px; resize: vertical; }
     small { color: var(--vscode-descriptionForeground); }
+    .profileActions { display: flex; gap: 8px; }
+    .profileActions input { flex: 1; }
     .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 24px; }
     button { background: var(--vscode-button-background); border: 0; color: var(--vscode-button-foreground); cursor: pointer; font: inherit; padding: 7px 14px; }
     button.secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
@@ -642,6 +803,14 @@ function getAndroidLaunchOptionsHtml(
       <label><input id="disableBootAnimation" type="checkbox"> <span id="noBootAnimationLabel"></span></label>
       <label><input id="disableAudio" type="checkbox"> <span id="noAudioLabel"></span></label>
     </fieldset>
+    <div class="field">
+      <label for="profileSelect" id="profileLabel"></label>
+      <select id="profileSelect"></select>
+    </div>
+    <div class="field">
+      <label for="profileName" id="profileNameLabel"></label>
+      <div class="profileActions"><input id="profileName" type="text" maxlength="64"><button type="button" id="saveProfile"></button><button class="secondary" type="button" id="deleteProfile"></button></div>
+    </div>
     <div class="field">
       <label for="gpuMode" id="gpuModeLabel"></label>
       <select id="gpuMode"></select>
@@ -666,6 +835,7 @@ function getAndroidLaunchOptionsHtml(
     const vscode = acquireVsCodeApi();
     const options = ${serializedOptions};
     const labels = ${serializedLabels};
+    let profiles = ${serializedProfiles};
     const setText = (id, text) => document.getElementById(id).textContent = text;
     setText('title', labels.title); setText('description', labels.description);
     setText('coldBootLabel', labels.coldBoot); setText('noBootAnimationLabel', labels.noBootAnimation);
@@ -673,15 +843,19 @@ function getAndroidLaunchOptionsHtml(
     setText('memoryLabel', labels.memory); setText('memoryHint', labels.memoryHint);
     setText('additionalArgsLabel', labels.additionalArgs); setText('argsHint', labels.argsHint);
     setText('saveAsDefaultLabel', labels.saveAsDefault); setText('cancel', labels.cancel); setText('start', labels.start);
+    setText('profileLabel', labels.profile); setText('profileNameLabel', labels.profileName); setText('saveProfile', labels.saveProfile); setText('deleteProfile', labels.deleteProfile);
     const gpuMode = document.getElementById('gpuMode');
     const modes = ${JSON.stringify(ANDROID_GPU_MODES)};
     modes.forEach((mode) => { const option = document.createElement('option'); option.value = mode; option.textContent = mode === 'default' ? labels.defaultGpu : mode; gpuMode.append(option); });
-    document.getElementById('coldBoot').checked = options.coldBoot;
-    document.getElementById('disableBootAnimation').checked = options.disableBootAnimation;
-    document.getElementById('disableAudio').checked = options.disableAudio;
-    gpuMode.value = options.gpuMode;
-    document.getElementById('memoryMb').value = options.memoryMb || '';
-    document.getElementById('additionalArgs').value = options.additionalArgs.join('\\n');
+    const applyOptions = (value) => { document.getElementById('coldBoot').checked = value.coldBoot; document.getElementById('disableBootAnimation').checked = value.disableBootAnimation; document.getElementById('disableAudio').checked = value.disableAudio; gpuMode.value = value.gpuMode; document.getElementById('memoryMb').value = value.memoryMb || ''; document.getElementById('additionalArgs').value = value.additionalArgs.join('\\n'); };
+    const readOptions = () => ({ coldBoot: document.getElementById('coldBoot').checked, disableBootAnimation: document.getElementById('disableBootAnimation').checked, disableAudio: document.getElementById('disableAudio').checked, gpuMode: gpuMode.value, memoryMb: document.getElementById('memoryMb').value === '' ? undefined : Number(document.getElementById('memoryMb').value), additionalArgs: document.getElementById('additionalArgs').value.split('\\n').map((value) => value.trim()).filter(Boolean) });
+    const profileSelect = document.getElementById('profileSelect');
+    const updateProfiles = (selectedProfileName) => { profileSelect.textContent = ''; const defaultOption = document.createElement('option'); defaultOption.value = ''; defaultOption.textContent = labels.savedDefault; profileSelect.append(defaultOption); profiles.forEach((profile) => { const option = document.createElement('option'); option.value = profile.name; option.textContent = profile.name; profileSelect.append(option); }); profileSelect.value = selectedProfileName || ''; document.getElementById('deleteProfile').disabled = !selectedProfileName; };
+    updateProfiles(); applyOptions(options);
+    profileSelect.addEventListener('change', () => { const profile = profiles.find((item) => item.name === profileSelect.value); document.getElementById('profileName').value = profile ? profile.name : ''; document.getElementById('deleteProfile').disabled = !profile; if (profile) applyOptions(profile.options); });
+    document.getElementById('saveProfile').addEventListener('click', () => { const profileName = document.getElementById('profileName').value.trim(); if (!profileName) { document.getElementById('profileName').setCustomValidity(labels.profileNameRequired); document.getElementById('profileName').reportValidity(); return; } document.getElementById('profileName').setCustomValidity(''); vscode.postMessage({ type: 'saveProfile', profileName, options: readOptions() }); });
+    document.getElementById('deleteProfile').addEventListener('click', () => { if (profileSelect.value) vscode.postMessage({ type: 'deleteProfile', profileName: profileSelect.value }); });
+    window.addEventListener('message', (event) => { const message = event.data; if (message.type === 'profilesUpdated') { profiles = message.profiles; updateProfiles(message.selectedProfileName); if (message.selectedProfileName) document.getElementById('profileName').value = message.selectedProfileName; } });
     document.getElementById('cancel').addEventListener('click', () => vscode.postMessage({ type: 'cancel' }));
     document.getElementById('form').addEventListener('submit', (event) => {
       event.preventDefault();
@@ -691,14 +865,7 @@ function getAndroidLaunchOptionsHtml(
         memoryInput.setCustomValidity(labels.memoryError); memoryInput.reportValidity(); return;
       }
       memoryInput.setCustomValidity('');
-      vscode.postMessage({ type: 'start', saveAsDefault: document.getElementById('saveAsDefault').checked, options: {
-        coldBoot: document.getElementById('coldBoot').checked,
-        disableBootAnimation: document.getElementById('disableBootAnimation').checked,
-        disableAudio: document.getElementById('disableAudio').checked,
-        gpuMode: gpuMode.value,
-        memoryMb,
-        additionalArgs: document.getElementById('additionalArgs').value.split('\\n').map((value) => value.trim()).filter(Boolean),
-      }});
+      vscode.postMessage({ type: 'start', saveAsDefault: document.getElementById('saveAsDefault').checked, options: readOptions() });
     });
   </script>
 </body>

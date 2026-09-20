@@ -154,6 +154,11 @@
         "icon": "$(settings-gear)"
       },
       {
+        "command": "emulators.startWithLaunchProfile",
+        "title": "%commands.startWithLaunchProfile.title%",
+        "icon": "$(symbol-key)"
+      },
+      {
         "command": "emulators.quickStartAndInstallApp",
         "title": "%commands.quickStartAndInstallApp.title%",
         "icon": "$(run-all)"
