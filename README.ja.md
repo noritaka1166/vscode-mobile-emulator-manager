@@ -10,6 +10,7 @@ VS Codeのサイドバーから、iOS SimulatorとAndroid Emulatorを一覧表�
 - **OSバージョン別グループ表示:** `iOS 26.0` や `Android 17 (API 37)` のようにOSバージョンごとに端末を整理して表示します。
 - **端末の起動:** サイドバーからワンクリックでSimulator / Emulatorを起動できます。起動完了まで進捗通知を表示します。
 - **Android端末のコールドブート:** スナップショットを読み込まずに停止中のAndroid Emulatorを起動できます。スナップショット破損や起動ループからの復旧に役立ちます。
+- **Android起動オプション:** 停止中のAndroid Emulatorに対して、コールドブート、起動アニメーション、音声、GPUモード、メモリ、任意引数を指定して起動できます。保存した選択は次回以降の既定値になります。
 - **タイムアウトとキャンセル:** 起動・停止・インストールの進捗通知から処理をキャンセルできます。外部コマンドが応答しない場合は、無期限に待機せず自動的にタイムアウトします。Android Emulator は起動済みの場合、キャンセル後もバックグラウンドで起動を続けます。
 - **ローカライズされたUI:** 実行時メッセージ、コマンド、ビュー、設定は VS Code の表示言語に追従します。英語と日本語の翻訳を収録しています。
 - **コマンドパレットから起動:** **Mobile Emulator Manager: 端末を起動...** を実行すると、Android / iOSを選んでから、Quick Pickで停止中の端末を起動できます。
@@ -36,6 +37,7 @@ VS Codeのサイドバーから、iOS SimulatorとAndroid Emulatorを一覧表�
 
 - **`mobileEmulatorManager.androidSdkPath`:** Android SDKへの任意のパスです。環境変数やOSごとの既定パスでSDKが見つからない場合に指定してください。
 - **`mobileEmulatorManager.xcodeDeveloperPath`:** XcodeのDeveloperディレクトリへの任意のパスです。例: `/Applications/Xcode.app/Contents/Developer`。空欄の場合は、`xcode-select --print-path` で選択されているXcodeを使用します。
+- **`mobileEmulatorManager.androidEmulatorArgs`:** Android Emulatorへの追加引数を指定できます。リストの各項目に1つの引数を指定し、拡張機能で選んだ起動オプションの後に適用されます。
 
 ## 使い方
 

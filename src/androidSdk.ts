@@ -1,5 +1,66 @@
 import * as path from "node:path";
 
+export const ANDROID_GPU_MODES = [
+    "default",
+    "auto",
+    "host",
+    "software",
+    "lavapipe",
+    "swiftshader",
+    "swangle",
+] as const;
+
+export type AndroidGpuMode = (typeof ANDROID_GPU_MODES)[number];
+
+export interface AndroidLaunchOptions {
+    coldBoot: boolean;
+    disableBootAnimation: boolean;
+    disableAudio: boolean;
+    gpuMode: AndroidGpuMode;
+    memoryMb?: number;
+    additionalArgs: string[];
+}
+
+export const DEFAULT_ANDROID_LAUNCH_OPTIONS: AndroidLaunchOptions = {
+    coldBoot: false,
+    disableBootAnimation: false,
+    disableAudio: false,
+    gpuMode: "default",
+    additionalArgs: [],
+};
+
+export function normalizeAndroidLaunchOptions(
+    value: unknown,
+): AndroidLaunchOptions {
+    const options =
+        typeof value === "object" && value !== null
+            ? (value as Partial<AndroidLaunchOptions>)
+            : {};
+    const memoryMb = options.memoryMb;
+
+    return {
+        coldBoot: options.coldBoot === true,
+        disableBootAnimation: options.disableBootAnimation === true,
+        disableAudio: options.disableAudio === true,
+        gpuMode: ANDROID_GPU_MODES.includes(options.gpuMode as AndroidGpuMode)
+            ? (options.gpuMode as AndroidGpuMode)
+            : "default",
+        memoryMb:
+            typeof memoryMb === "number" &&
+            Number.isInteger(memoryMb) &&
+            memoryMb >= 1536 &&
+            memoryMb <= 8192
+                ? memoryMb
+                : undefined,
+        additionalArgs: Array.isArray(options.additionalArgs)
+            ? options.additionalArgs
+                  .filter((arg): arg is string => typeof arg === "string")
+                  .map((arg) => arg.trim())
+                  .filter((arg) => arg.length > 0 && arg !== "-avd")
+            : [],
+    };
+}
+
 export function getDefaultAndroidSdkPaths(
     platform: NodeJS.Platform,
     homeDirectory: string,
@@ -35,9 +96,26 @@ export function getAndroidToolPath(
 
 export function getAndroidEmulatorStartArgs(
     avdName: string,
-    coldBoot = false,
+    launchOptions: Partial<AndroidLaunchOptions> = {},
 ): string[] {
-    return coldBoot
-        ? ["-avd", avdName, "-no-snapshot-load"]
-        : ["-avd", avdName];
+    const options = normalizeAndroidLaunchOptions(launchOptions);
+    const args = ["-avd", avdName];
+
+    if (options.coldBoot) {
+        args.push("-no-snapshot-load");
+    }
+    if (options.disableBootAnimation) {
+        args.push("-no-boot-anim");
+    }
+    if (options.disableAudio) {
+        args.push("-no-audio");
+    }
+    if (options.gpuMode !== "default") {
+        args.push("-gpu", options.gpuMode);
+    }
+    if (options.memoryMb) {
+        args.push("-memory", String(options.memoryMb));
+    }
+
+    return [...args, ...options.additionalArgs];
 }

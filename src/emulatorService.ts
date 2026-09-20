@@ -4,9 +4,12 @@ import * as path from "node:path";
 import * as fs from "node:fs";
 import * as vscode from "vscode";
 import {
+    type AndroidLaunchOptions,
+    DEFAULT_ANDROID_LAUNCH_OPTIONS,
     getAndroidEmulatorStartArgs,
     getAndroidToolPath,
     getDefaultAndroidSdkPaths,
+    normalizeAndroidLaunchOptions,
 } from "./androidSdk";
 import { getIosSimulatorAppPath } from "./iosSimulator";
 
@@ -69,7 +72,14 @@ interface CommandOptions {
 }
 
 export class EmulatorService {
+    private defaultAndroidLaunchOptions: AndroidLaunchOptions =
+        DEFAULT_ANDROID_LAUNCH_OPTIONS;
+
     constructor(private readonly log?: (message: string) => void) {}
+
+    public setDefaultAndroidLaunchOptions(value: unknown): void {
+        this.defaultAndroidLaunchOptions = normalizeAndroidLaunchOptions(value);
+    }
 
     private getAdbCommand(): string {
         const configuredOrEnvSdkPath =
@@ -141,6 +151,19 @@ export class EmulatorService {
             ?.trim();
 
         return configuredPath ? this.expandHome(configuredPath) : undefined;
+    }
+
+    private getConfiguredAndroidEmulatorArgs(): string[] {
+        const configuredArgs = vscode.workspace
+            .getConfiguration("mobileEmulatorManager")
+            .get<unknown>("androidEmulatorArgs");
+
+        return Array.isArray(configuredArgs)
+            ? configuredArgs
+                  .filter((arg): arg is string => typeof arg === "string")
+                  .map((arg) => arg.trim())
+                  .filter((arg) => arg.length > 0 && arg !== "-avd")
+            : [];
     }
 
     private getXcrunEnvironment(): NodeJS.ProcessEnv | undefined {
@@ -425,7 +448,7 @@ export class EmulatorService {
     public async startEmulator(
         emulator: Emulator,
         signal?: AbortSignal,
-        coldBoot = false,
+        launchOptions: Partial<AndroidLaunchOptions> = {},
     ): Promise<void> {
         if (emulator.os === "iOS") {
             const developerDirectory = await this.getXcodeDeveloperPath(signal);
@@ -458,9 +481,18 @@ export class EmulatorService {
                 process.platform,
             );
             this.throwIfCancelled(signal);
+            const options = normalizeAndroidLaunchOptions({
+                ...this.defaultAndroidLaunchOptions,
+                ...launchOptions,
+                additionalArgs: [
+                    ...this.getConfiguredAndroidEmulatorArgs(),
+                    ...this.defaultAndroidLaunchOptions.additionalArgs,
+                    ...(launchOptions.additionalArgs || []),
+                ],
+            });
             await this.spawnDetached(
                 emulatorCommand,
-                getAndroidEmulatorStartArgs(emulator.id, coldBoot),
+                getAndroidEmulatorStartArgs(emulator.id, options),
             );
             const serial = await this.waitForAndroidDevice(emulator, signal);
             await this.waitForAndroidBootCompletion(emulator, serial, signal);

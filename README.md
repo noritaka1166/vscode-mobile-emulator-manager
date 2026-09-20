@@ -10,6 +10,7 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 - **Smart Grouping:** Devices are neatly grouped by their OS Version (e.g., `iOS 26.0`, `Android 17 (API 37)`), making it easy to find the exact environment you need.
 - **Start Devices:** Boot up your simulator/emulator with a single click. A loading indicator will appear, ensuring the device is fully booted and recognized before the status updates.
 - **Cold Boot Android Devices:** Start a stopped Android emulator without loading its snapshot, which helps recover from corrupted snapshots or boot loops.
+- **Android Launch Options:** Select startup options for a stopped Android emulator, including Cold Boot, boot animation, audio, GPU mode, memory, and additional arguments. Saved options become the default for future starts.
 - **Timeouts and Cancellation:** Start, stop, and install operations can be cancelled from their progress notification. Commands time out automatically instead of leaving the operation running indefinitely. Cancelling an Android start stops waiting for boot completion, but an emulator that has already launched continues starting in the background.
 - **Localized UI:** Runtime messages, commands, views, and settings follow the VS Code display language, with English and Japanese translations included.
 - **Quick Start from Command Palette:** Run **Mobile Emulator Manager: Start Device...** to choose Android or iOS, then start a stopped device without opening the sidebar.
@@ -36,6 +37,7 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 
 - **`mobileEmulatorManager.androidSdkPath`:** Optional path to your Android SDK. Use this when automatic detection through environment variables and platform defaults does not find your SDK.
 - **`mobileEmulatorManager.xcodeDeveloperPath`:** Optional path to Xcode's Developer directory, such as `/Applications/Xcode.app/Contents/Developer`. When empty, the extension uses the Xcode selected by `xcode-select --print-path`.
+- **`mobileEmulatorManager.androidEmulatorArgs`:** Optional additional Android Emulator arguments. Add one complete argument per list entry; they are applied after the launch options selected in the extension.
 
 ## Usage
 

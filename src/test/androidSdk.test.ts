@@ -49,10 +49,33 @@ test("Unix tools do not use a file extension", () => {
 });
 
 test("cold boot disables loading the AVD snapshot", () => {
-    deepEqual(getAndroidEmulatorStartArgs("Pixel_9", true), [
+    deepEqual(getAndroidEmulatorStartArgs("Pixel_9", { coldBoot: true }), [
         "-avd",
         "Pixel_9",
         "-no-snapshot-load",
     ]);
     deepEqual(getAndroidEmulatorStartArgs("Pixel_9"), ["-avd", "Pixel_9"]);
+});
+
+test("launch options map to Android Emulator arguments", () => {
+    deepEqual(
+        getAndroidEmulatorStartArgs("Pixel_9", {
+            disableBootAnimation: true,
+            disableAudio: true,
+            gpuMode: "software",
+            memoryMb: 4096,
+            additionalArgs: ["-no-snapshot-save"],
+        }),
+        [
+            "-avd",
+            "Pixel_9",
+            "-no-boot-anim",
+            "-no-audio",
+            "-gpu",
+            "software",
+            "-memory",
+            "4096",
+            "-no-snapshot-save",
+        ],
+    );
 });

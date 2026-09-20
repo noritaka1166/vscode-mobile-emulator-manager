@@ -82,6 +82,15 @@
           "default": "",
           "scope": "machine-overridable",
           "markdownDescription": "%configuration.xcodeDeveloperPath.markdownDescription%"
+        },
+        "mobileEmulatorManager.androidEmulatorArgs": {
+          "type": "array",
+          "default": [],
+          "scope": "machine-overridable",
+          "items": {
+            "type": "string"
+          },
+          "markdownDescription": "%configuration.androidEmulatorArgs.markdownDescription%"
         }
       }
     },
@@ -128,6 +137,11 @@
         "command": "emulators.moreActions",
         "title": "%commands.moreActions.title%",
         "icon": "$(ellipsis)"
+      },
+      {
+        "command": "emulators.startWithLaunchOptions",
+        "title": "%commands.startWithLaunchOptions.title%",
+        "icon": "$(settings-gear)"
       },
       {
         "command": "emulators.quickStartAndInstallApp",

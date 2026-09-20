@@ -1,4 +1,9 @@
 import * as vscode from "vscode";
+import {
+    ANDROID_GPU_MODES,
+    type AndroidLaunchOptions,
+    normalizeAndroidLaunchOptions,
+} from "./androidSdk";
 import { type Emulator, EmulatorService } from "./emulatorService";
 import {
     EmulatorTreeDataProvider,
@@ -7,6 +12,7 @@ import {
 
 const LAST_ANDROID_APP_PATH_KEY = "lastAndroidAppPath";
 const LAST_IOS_APP_PATH_KEY = "lastIosAppPath";
+const ANDROID_LAUNCH_OPTIONS_KEY = "androidLaunchOptions";
 
 type EmulatorState = Emulator["state"];
 
@@ -16,6 +22,9 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     const emulatorService = new EmulatorService((message) =>
         logOutput(outputChannel, message),
+    );
+    emulatorService.setDefaultAndroidLaunchOptions(
+        context.globalState.get<unknown>(ANDROID_LAUNCH_OPTIONS_KEY),
     );
     const treeDataProvider = new EmulatorTreeDataProvider(emulatorService);
     const treeView = vscode.window.createTreeView("emulatorsView", {
@@ -90,7 +99,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     emulatorService,
                     treeDataProvider,
                     outputChannel,
-                    true,
+                    { coldBoot: true },
                 );
             },
         ),
@@ -116,13 +125,24 @@ export function activate(context: vscode.ExtensionContext): void {
                     },
                 ];
                 if (emulator.os === "Android") {
-                    actions.unshift({
-                        label: vscode.l10n.t("Cold Boot"),
-                        description: vscode.l10n.t(
-                            "Start without loading the saved snapshot.",
-                        ),
-                        command: "emulators.coldStart",
-                    });
+                    actions.unshift(
+                        {
+                            label: vscode.l10n.t(
+                                "Start with Launch Options...",
+                            ),
+                            description: vscode.l10n.t(
+                                "Choose startup settings such as GPU mode and memory.",
+                            ),
+                            command: "emulators.startWithLaunchOptions",
+                        },
+                        {
+                            label: vscode.l10n.t("Cold Boot"),
+                            description: vscode.l10n.t(
+                                "Start without loading the saved snapshot.",
+                            ),
+                            command: "emulators.coldStart",
+                        },
+                    );
                 }
 
                 const action = await vscode.window.showQuickPick(actions, {
@@ -131,6 +151,31 @@ export function activate(context: vscode.ExtensionContext): void {
                 if (action) {
                     await vscode.commands.executeCommand(action.command, node);
                 }
+            },
+        ),
+        vscode.commands.registerCommand(
+            "emulators.startWithLaunchOptions",
+            async (node?: EmulatorTreeItem) => {
+                if (node?.emulator?.os !== "Android") {
+                    return;
+                }
+
+                const launchOptions = await selectAndroidLaunchOptions(
+                    context,
+                    (options) =>
+                        emulatorService.setDefaultAndroidLaunchOptions(options),
+                );
+                if (!launchOptions) {
+                    return;
+                }
+
+                await startEmulatorWithProgress(
+                    node.emulator,
+                    emulatorService,
+                    treeDataProvider,
+                    outputChannel,
+                    launchOptions,
+                );
             },
         ),
         vscode.commands.registerCommand(
@@ -436,6 +481,194 @@ function formatEmulator(emulator: Emulator): string {
     return `${emulator.name} (${emulator.os}, ${emulator.id})`;
 }
 
+async function selectAndroidLaunchOptions(
+    context: vscode.ExtensionContext,
+    onSaveAsDefault: (options: AndroidLaunchOptions) => void,
+): Promise<AndroidLaunchOptions | undefined> {
+    const initialOptions = normalizeAndroidLaunchOptions(
+        context.globalState.get<unknown>(ANDROID_LAUNCH_OPTIONS_KEY),
+    );
+    const panel = vscode.window.createWebviewPanel(
+        "androidLaunchOptions",
+        vscode.l10n.t("Android Launch Options"),
+        vscode.ViewColumn.Active,
+        { enableScripts: true },
+    );
+
+    panel.webview.html = getAndroidLaunchOptionsHtml(
+        panel.webview,
+        initialOptions,
+    );
+
+    return new Promise((resolve) => {
+        let completed = false;
+        const finish = (options?: AndroidLaunchOptions) => {
+            if (completed) {
+                return;
+            }
+            completed = true;
+            resolve(options);
+            panel.dispose();
+        };
+
+        panel.onDidDispose(() => finish());
+        panel.webview.onDidReceiveMessage(async (message: unknown) => {
+            if (typeof message !== "object" || message === null) {
+                return;
+            }
+
+            const data = message as {
+                type?: unknown;
+                options?: unknown;
+                saveAsDefault?: unknown;
+            };
+            if (data.type === "cancel") {
+                finish();
+                return;
+            }
+            if (data.type !== "start") {
+                return;
+            }
+
+            const options = normalizeAndroidLaunchOptions(data.options);
+            if (data.saveAsDefault === true) {
+                await context.globalState.update(
+                    ANDROID_LAUNCH_OPTIONS_KEY,
+                    options,
+                );
+                onSaveAsDefault(options);
+            }
+            finish(options);
+        });
+    });
+}
+
+function getAndroidLaunchOptionsHtml(
+    webview: vscode.Webview,
+    options: AndroidLaunchOptions,
+): string {
+    const nonce = Math.random().toString(36).slice(2);
+    const labels = {
+        title: vscode.l10n.t("Android Launch Options"),
+        description: vscode.l10n.t(
+            "Choose options for this start. Saved defaults apply to future starts.",
+        ),
+        coldBoot: vscode.l10n.t("Cold Boot (do not load snapshot)"),
+        noBootAnimation: vscode.l10n.t("Disable boot animation"),
+        noAudio: vscode.l10n.t("Disable audio"),
+        gpuMode: vscode.l10n.t("GPU mode"),
+        defaultGpu: vscode.l10n.t("Use AVD default"),
+        memory: vscode.l10n.t("Memory (MB)"),
+        memoryHint: vscode.l10n.t(
+            "Leave empty to use the AVD setting (1536–8192).",
+        ),
+        additionalArgs: vscode.l10n.t("Additional arguments"),
+        argsHint: vscode.l10n.t(
+            "Enter one complete argument per line. They are appended after the selected options.",
+        ),
+        saveAsDefault: vscode.l10n.t("Save as default"),
+        start: vscode.l10n.t("Start"),
+        cancel: vscode.l10n.t("Cancel"),
+        memoryError: vscode.l10n.t(
+            "Memory must be an integer from 1536 to 8192.",
+        ),
+    };
+    const serializedOptions = JSON.stringify(options).replace(/</g, "\\u003c");
+    const serializedLabels = JSON.stringify(labels).replace(/</g, "\\u003c");
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'nonce-${nonce}'; script-src 'nonce-${nonce}';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style nonce="${nonce}">
+    body { color: var(--vscode-foreground); font-family: var(--vscode-font-family); margin: 20px; max-width: 640px; }
+    h1 { font-size: 1.3em; margin: 0 0 8px; }
+    p { color: var(--vscode-descriptionForeground); line-height: 1.5; }
+    fieldset { border: 1px solid var(--vscode-editorWidget-border); margin: 20px 0; padding: 14px; }
+    .field { display: grid; gap: 6px; margin: 14px 0; }
+    label { display: flex; align-items: center; gap: 8px; }
+    input, select, textarea { background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border); color: var(--vscode-input-foreground); font: inherit; padding: 6px; }
+    textarea { min-height: 92px; resize: vertical; }
+    small { color: var(--vscode-descriptionForeground); }
+    .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 24px; }
+    button { background: var(--vscode-button-background); border: 0; color: var(--vscode-button-foreground); cursor: pointer; font: inherit; padding: 7px 14px; }
+    button.secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+  </style>
+</head>
+<body>
+  <h1 id="title"></h1>
+  <p id="description"></p>
+  <form id="form">
+    <fieldset>
+      <label><input id="coldBoot" type="checkbox"> <span id="coldBootLabel"></span></label>
+      <label><input id="disableBootAnimation" type="checkbox"> <span id="noBootAnimationLabel"></span></label>
+      <label><input id="disableAudio" type="checkbox"> <span id="noAudioLabel"></span></label>
+    </fieldset>
+    <div class="field">
+      <label for="gpuMode" id="gpuModeLabel"></label>
+      <select id="gpuMode"></select>
+    </div>
+    <div class="field">
+      <label for="memoryMb" id="memoryLabel"></label>
+      <input id="memoryMb" type="number" min="1536" max="8192" step="1" inputmode="numeric">
+      <small id="memoryHint"></small>
+    </div>
+    <div class="field">
+      <label for="additionalArgs" id="additionalArgsLabel"></label>
+      <textarea id="additionalArgs" spellcheck="false"></textarea>
+      <small id="argsHint"></small>
+    </div>
+    <label><input id="saveAsDefault" type="checkbox"> <span id="saveAsDefaultLabel"></span></label>
+    <div class="actions">
+      <button class="secondary" type="button" id="cancel"></button>
+      <button type="submit" id="start"></button>
+    </div>
+  </form>
+  <script nonce="${nonce}">
+    const vscode = acquireVsCodeApi();
+    const options = ${serializedOptions};
+    const labels = ${serializedLabels};
+    const setText = (id, text) => document.getElementById(id).textContent = text;
+    setText('title', labels.title); setText('description', labels.description);
+    setText('coldBootLabel', labels.coldBoot); setText('noBootAnimationLabel', labels.noBootAnimation);
+    setText('noAudioLabel', labels.noAudio); setText('gpuModeLabel', labels.gpuMode);
+    setText('memoryLabel', labels.memory); setText('memoryHint', labels.memoryHint);
+    setText('additionalArgsLabel', labels.additionalArgs); setText('argsHint', labels.argsHint);
+    setText('saveAsDefaultLabel', labels.saveAsDefault); setText('cancel', labels.cancel); setText('start', labels.start);
+    const gpuMode = document.getElementById('gpuMode');
+    const modes = ${JSON.stringify(ANDROID_GPU_MODES)};
+    modes.forEach((mode) => { const option = document.createElement('option'); option.value = mode; option.textContent = mode === 'default' ? labels.defaultGpu : mode; gpuMode.append(option); });
+    document.getElementById('coldBoot').checked = options.coldBoot;
+    document.getElementById('disableBootAnimation').checked = options.disableBootAnimation;
+    document.getElementById('disableAudio').checked = options.disableAudio;
+    gpuMode.value = options.gpuMode;
+    document.getElementById('memoryMb').value = options.memoryMb || '';
+    document.getElementById('additionalArgs').value = options.additionalArgs.join('\\n');
+    document.getElementById('cancel').addEventListener('click', () => vscode.postMessage({ type: 'cancel' }));
+    document.getElementById('form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const memoryInput = document.getElementById('memoryMb');
+      const memoryMb = memoryInput.value === '' ? undefined : Number(memoryInput.value);
+      if (memoryMb !== undefined && (!Number.isInteger(memoryMb) || memoryMb < 1536 || memoryMb > 8192)) {
+        memoryInput.setCustomValidity(labels.memoryError); memoryInput.reportValidity(); return;
+      }
+      memoryInput.setCustomValidity('');
+      vscode.postMessage({ type: 'start', saveAsDefault: document.getElementById('saveAsDefault').checked, options: {
+        coldBoot: document.getElementById('coldBoot').checked,
+        disableBootAnimation: document.getElementById('disableBootAnimation').checked,
+        disableAudio: document.getElementById('disableAudio').checked,
+        gpuMode: gpuMode.value,
+        memoryMb,
+        additionalArgs: document.getElementById('additionalArgs').value.split('\\n').map((value) => value.trim()).filter(Boolean),
+      }});
+    });
+  </script>
+</body>
+</html>`;
+}
+
 async function selectEmulatorByState(
     emulatorService: EmulatorService,
     state: EmulatorState,
@@ -567,8 +800,9 @@ async function startEmulatorWithProgress(
     emulatorService: EmulatorService,
     treeDataProvider: EmulatorTreeDataProvider,
     outputChannel: vscode.OutputChannel,
-    coldBoot = false,
+    launchOptions: Partial<AndroidLaunchOptions> = {},
 ): Promise<void> {
+    const coldBoot = launchOptions.coldBoot === true;
     await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
@@ -587,7 +821,7 @@ async function startEmulatorWithProgress(
                     await emulatorService.startEmulator(
                         emulator,
                         signal,
-                        coldBoot,
+                        launchOptions,
                     );
                     logOutput(
                         outputChannel,
