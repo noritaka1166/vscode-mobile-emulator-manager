@@ -1,5 +1,6 @@
 {
   "start": "start",
+  "Favorites": "Favorites",
   "cold boot": "cold boot",
   "Start with Launch Options...": "Start with Launch Options...",
   "Choose startup settings such as GPU mode and memory.": "Choose startup settings such as GPU mode and memory.",

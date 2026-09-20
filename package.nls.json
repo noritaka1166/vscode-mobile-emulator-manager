@@ -9,6 +9,8 @@
     "viewsContainers.emulators.title": "Emulators",
     "views.devices.name": "Devices",
     "commands.refresh.title": "Refresh",
+    "commands.addFavorite.title": "Add to Favorites",
+    "commands.removeFavorite.title": "Remove from Favorites",
     "commands.start.title": "Start",
     "commands.quickStart.title": "Mobile Emulator Manager: Start Device...",
     "commands.coldStart.title": "Mobile Emulator Manager: Cold Boot Android Device...",

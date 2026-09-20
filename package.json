@@ -119,6 +119,16 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "emulators.addFavorite",
+        "title": "%commands.addFavorite.title%",
+        "icon": "$(star-empty)"
+      },
+      {
+        "command": "emulators.removeFavorite",
+        "title": "%commands.removeFavorite.title%",
+        "icon": "$(star-full)"
+      },
+      {
         "command": "emulators.start",
         "title": "%commands.start.title%",
         "icon": "$(debug-start)"
@@ -202,7 +212,7 @@
         {
           "command": "emulators.moreActions",
           "when": "view == emulatorsView && viewItem =~ /stopped$/",
-          "group": "inline@2"
+          "group": "inline@3"
         },
         {
           "command": "emulators.stop",
@@ -226,6 +236,16 @@
         {
           "command": "emulators.copyAndroidSerial",
           "when": "view == emulatorsView && viewItem == emulator-android-running"
+        },
+        {
+          "command": "emulators.addFavorite",
+          "when": "view == emulatorsView && viewItem =~ /-regular-/",
+          "group": "inline@2"
+        },
+        {
+          "command": "emulators.removeFavorite",
+          "when": "view == emulatorsView && viewItem =~ /-favorite-/",
+          "group": "inline@2"
         }
       ]
     }

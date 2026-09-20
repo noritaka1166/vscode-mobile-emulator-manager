@@ -5,6 +5,7 @@ import {
     normalizeAndroidLaunchOptions,
 } from "./androidSdk";
 import { type Emulator, EmulatorService } from "./emulatorService";
+import { getFavoriteEmulatorKey, getFavoriteEmulatorKeys } from "./favorites";
 import {
     EmulatorTreeDataProvider,
     type EmulatorTreeItem,
@@ -13,6 +14,7 @@ import {
 const LAST_ANDROID_APP_PATH_KEY = "lastAndroidAppPath";
 const LAST_IOS_APP_PATH_KEY = "lastIosAppPath";
 const ANDROID_LAUNCH_OPTIONS_KEY = "androidLaunchOptions";
+const FAVORITE_EMULATOR_KEYS = "favoriteEmulatorKeys";
 
 type EmulatorState = Emulator["state"];
 
@@ -26,10 +28,36 @@ export function activate(context: vscode.ExtensionContext): void {
     emulatorService.setDefaultAndroidLaunchOptions(
         context.globalState.get<unknown>(ANDROID_LAUNCH_OPTIONS_KEY),
     );
-    const treeDataProvider = new EmulatorTreeDataProvider(emulatorService);
+    const favoriteEmulatorKeys = getFavoriteEmulatorKeys(
+        context.globalState.get<unknown>(FAVORITE_EMULATOR_KEYS),
+    );
+    const treeDataProvider = new EmulatorTreeDataProvider(
+        emulatorService,
+        favoriteEmulatorKeys,
+    );
     const treeView = vscode.window.createTreeView("emulatorsView", {
         treeDataProvider,
     });
+    const updateFavorite = async (
+        node: EmulatorTreeItem | undefined,
+        favorite: boolean,
+    ): Promise<void> => {
+        if (!node?.emulator) {
+            return;
+        }
+
+        const key = getFavoriteEmulatorKey(node.emulator);
+        if (favorite) {
+            favoriteEmulatorKeys.add(key);
+        } else {
+            favoriteEmulatorKeys.delete(key);
+        }
+        await context.globalState.update(
+            FAVORITE_EMULATOR_KEYS,
+            Array.from(favoriteEmulatorKeys).sort(),
+        );
+        treeDataProvider.setFavoriteEmulatorKeys(favoriteEmulatorKeys);
+    };
 
     context.subscriptions.push(
         outputChannel,
@@ -47,6 +75,14 @@ export function activate(context: vscode.ExtensionContext): void {
             logOutput(outputChannel, "Refreshing device tree.");
             treeDataProvider.refresh();
         }),
+        vscode.commands.registerCommand(
+            "emulators.addFavorite",
+            async (node: EmulatorTreeItem) => updateFavorite(node, true),
+        ),
+        vscode.commands.registerCommand(
+            "emulators.removeFavorite",
+            async (node: EmulatorTreeItem) => updateFavorite(node, false),
+        ),
         vscode.commands.registerCommand(
             "emulators.start",
             async (node: EmulatorTreeItem) => {

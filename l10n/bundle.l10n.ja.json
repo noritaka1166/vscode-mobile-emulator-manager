@@ -1,5 +1,6 @@
 {
     "start": "起動",
+    "Favorites": "お気に入り",
     "cold boot": "コールドブート",
     "Start with Launch Options...": "起動オプションを指定して起動...",
     "Choose startup settings such as GPU mode and memory.": "GPUモードやメモリなどの起動設定を選択します。",

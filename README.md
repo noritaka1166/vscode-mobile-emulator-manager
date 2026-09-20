@@ -7,6 +7,7 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 ## Features
 
 - **Sidebar Integration:** View a list of all available iOS and Android devices in the Activity Bar.
+- **Favorites:** Keep frequently used devices in a Favorites group at the top of the device list.
 - **Smart Grouping:** Devices are neatly grouped by their OS Version (e.g., `iOS 26.0`, `Android 17 (API 37)`), making it easy to find the exact environment you need.
 - **Start Devices:** Boot up your simulator/emulator with a single click. A loading indicator will appear, ensuring the device is fully booted and recognized before the status updates.
 - **Cold Boot Android Devices:** Start a stopped Android emulator without loading its snapshot, which helps recover from corrupted snapshots or boot loops.
