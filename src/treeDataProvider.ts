@@ -166,17 +166,7 @@ export class EmulatorTreeItem extends vscode.TreeItem {
             }
             this.description = favorite ? `★ ${desc}` : desc;
 
-            if (emulator.state === "running") {
-                this.iconPath = new vscode.ThemeIcon(
-                    "circle-filled",
-                    new vscode.ThemeColor("testing.iconPassed"),
-                );
-            } else {
-                this.iconPath = new vscode.ThemeIcon(
-                    "circle-large-outline",
-                    new vscode.ThemeColor("disabledForeground"),
-                );
-            }
+            this.iconPath = this.getEmulatorIcon(emulator);
         } else if (type === "osVersion") {
             this.iconPath = new vscode.ThemeIcon("versions");
             this.contextValue = "osVersion";
@@ -187,5 +177,19 @@ export class EmulatorTreeItem extends vscode.TreeItem {
             this.iconPath = new vscode.ThemeIcon("folder");
             this.contextValue = "platform";
         }
+    }
+
+    private getEmulatorIcon(emulator: Emulator): vscode.ThemeIcon {
+        if (emulator.state === "running") {
+            return new vscode.ThemeIcon(
+                "circle-filled",
+                new vscode.ThemeColor("testing.iconPassed"),
+            );
+        }
+
+        return new vscode.ThemeIcon(
+            "circle-large-outline",
+            new vscode.ThemeColor("disabledForeground"),
+        );
     }
 }
