@@ -6,6 +6,8 @@ import {
     getAndroidLaunchProfiles,
     getAndroidToolPath,
     getDefaultAndroidSdkPaths,
+    mergeAndroidLaunchOptions,
+    normalizeAndroidLaunchOptions,
 } from "../androidSdk";
 
 test("macOS uses the standard Android SDK path", () => {
@@ -78,6 +80,75 @@ test("launch options map to Android Emulator arguments", () => {
             "4096",
             "-no-snapshot-save",
         ],
+    );
+});
+
+test("starting with newly saved defaults does not duplicate additional arguments", () => {
+    const saved = normalizeAndroidLaunchOptions({
+        additionalArgs: ["-gpu", "software", "-no-snapshot-save"],
+    });
+
+    deepEqual(
+        getAndroidEmulatorStartArgs(
+            "Pixel_9",
+            mergeAndroidLaunchOptions(saved, saved),
+        ),
+        ["-avd", "Pixel_9", "-gpu", "software", "-no-snapshot-save"],
+    );
+});
+
+test("explicit launch options replace saved arguments and override saved fields", () => {
+    const saved = normalizeAndroidLaunchOptions({
+        coldBoot: true,
+        disableAudio: true,
+        additionalArgs: ["-gpu", "host"],
+    });
+
+    deepEqual(
+        getAndroidEmulatorStartArgs(
+            "Pixel_9",
+            mergeAndroidLaunchOptions(saved, {
+                coldBoot: false,
+                additionalArgs: ["-gpu", "software"],
+            }),
+        ),
+        ["-avd", "Pixel_9", "-no-audio", "-gpu", "software"],
+    );
+});
+
+test("omitted additional arguments retain defaults and configured arguments", () => {
+    const saved = normalizeAndroidLaunchOptions({
+        additionalArgs: ["-no-snapshot-save"],
+    });
+
+    deepEqual(
+        getAndroidEmulatorStartArgs(
+            "Pixel_9",
+            mergeAndroidLaunchOptions(saved, { coldBoot: true }, ["-verbose"]),
+        ),
+        [
+            "-avd",
+            "Pixel_9",
+            "-no-snapshot-load",
+            "-verbose",
+            "-no-snapshot-save",
+        ],
+    );
+});
+
+test("empty explicit arguments clear saved arguments but retain configured arguments", () => {
+    const saved = normalizeAndroidLaunchOptions({
+        additionalArgs: ["-gpu", "host"],
+    });
+
+    deepEqual(
+        getAndroidEmulatorStartArgs(
+            "Pixel_9",
+            mergeAndroidLaunchOptions(saved, { additionalArgs: [] }, [
+                "-verbose",
+            ]),
+        ),
+        ["-avd", "Pixel_9", "-verbose"],
     );
 });
 

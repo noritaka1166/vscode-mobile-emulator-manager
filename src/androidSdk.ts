@@ -66,6 +66,21 @@ export function normalizeAndroidLaunchOptions(
     };
 }
 
+export function mergeAndroidLaunchOptions(
+    defaults: AndroidLaunchOptions,
+    overrides: Partial<AndroidLaunchOptions> = {},
+    configuredArgs: string[] = [],
+): AndroidLaunchOptions {
+    return normalizeAndroidLaunchOptions({
+        ...defaults,
+        ...overrides,
+        additionalArgs: [
+            ...configuredArgs,
+            ...(overrides.additionalArgs ?? defaults.additionalArgs),
+        ],
+    });
+}
+
 export function normalizeAndroidLaunchProfileName(
     value: unknown,
 ): string | undefined {

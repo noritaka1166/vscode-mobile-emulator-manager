@@ -9,6 +9,7 @@ import {
     getAndroidEmulatorStartArgs,
     getAndroidToolPath,
     getDefaultAndroidSdkPaths,
+    mergeAndroidLaunchOptions,
     normalizeAndroidLaunchOptions,
 } from "./androidSdk";
 import { getIosSimulatorAppPath } from "./iosSimulator";
@@ -481,15 +482,11 @@ export class EmulatorService {
                 process.platform,
             );
             this.throwIfCancelled(signal);
-            const options = normalizeAndroidLaunchOptions({
-                ...this.defaultAndroidLaunchOptions,
-                ...launchOptions,
-                additionalArgs: [
-                    ...this.getConfiguredAndroidEmulatorArgs(),
-                    ...this.defaultAndroidLaunchOptions.additionalArgs,
-                    ...(launchOptions.additionalArgs || []),
-                ],
-            });
+            const options = mergeAndroidLaunchOptions(
+                this.defaultAndroidLaunchOptions,
+                launchOptions,
+                this.getConfiguredAndroidEmulatorArgs(),
+            );
             await this.spawnDetached(
                 emulatorCommand,
                 getAndroidEmulatorStartArgs(emulator.id, options),
