@@ -709,6 +709,7 @@ export class EmulatorService {
                 {
                     signal,
                     timeoutMs: APP_INSTALL_TIMEOUT_MS,
+                    env: this.getXcrunEnvironment(),
                 },
             );
         } finally {
