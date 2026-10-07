@@ -505,25 +505,16 @@ export class EmulatorService {
         this.log?.(
             `Waiting for Android Emulator ${emulator.name} to appear in ADB.`,
         );
-        while (Date.now() < deadline) {
-            this.throwIfCancelled(signal);
-            const serial = await this.getRunningAndroidSerial(
-                emulator.id,
-                signal,
-            );
-            if (serial) {
-                this.log?.(
-                    `Android Emulator ${emulator.name} is available in ADB as ${serial}.`,
-                );
-                return serial;
-            }
-
-            await this.sleep(STARTUP_POLL_INTERVAL_MS, signal);
-        }
-
-        throw new Error(
+        const serial = await this.pollForAndroidStartup(
+            () => this.getRunningAndroidSerial(emulator.id, signal),
+            deadline,
             `Timed out waiting for ${emulator.name} to appear in ADB.`,
+            signal,
         );
+        this.log?.(
+            `Android Emulator ${emulator.name} is available in ADB as ${serial}.`,
+        );
+        return serial;
     }
 
     private async waitForAndroidBootCompletion(
@@ -537,33 +528,60 @@ export class EmulatorService {
         this.log?.(
             `Waiting for Android Emulator ${emulator.name} to finish booting.`,
         );
-        while (Date.now() < deadline) {
-            try {
-                this.throwIfCancelled(signal);
-                const bootCompleted = await this.executeFile(
-                    adbCommand,
-                    ["-s", serial, "shell", "getprop", "sys.boot_completed"],
-                    { signal },
-                );
-                if (bootCompleted.trim() === "1") {
-                    this.log?.(
-                        `Android Emulator ${emulator.name} finished booting.`,
+        await this.pollForAndroidStartup(
+            async () => {
+                try {
+                    const bootCompleted = await this.executeFile(
+                        adbCommand,
+                        [
+                            "-s",
+                            serial,
+                            "shell",
+                            "getprop",
+                            "sys.boot_completed",
+                        ],
+                        { signal },
                     );
-                    return;
+                    if (bootCompleted.trim() === "1") {
+                        return true;
+                    }
+                } catch (error) {
+                    this.throwIfCancelled(signal);
+                    this.logError(
+                        `Failed to check Android boot status for ${emulator.name}`,
+                        error,
+                    );
                 }
-            } catch (error) {
-                this.throwIfCancelled(signal);
-                this.logError(
-                    `Failed to check Android boot status for ${emulator.name}`,
-                    error,
-                );
-            }
+                return undefined;
+            },
+            deadline,
+            `Timed out waiting for ${emulator.name} to finish booting.`,
+            signal,
+        );
+        this.log?.(`Android Emulator ${emulator.name} finished booting.`);
+    }
 
-            await this.sleep(STARTUP_POLL_INTERVAL_MS, signal);
+    private async pollForAndroidStartup<T>(
+        check: () => Promise<T | undefined>,
+        deadline: number,
+        timeoutMessage: string,
+        signal?: AbortSignal,
+    ): Promise<T> {
+        if (Date.now() >= deadline) {
+            throw new Error(timeoutMessage);
+        }
+        this.throwIfCancelled(signal);
+        const result = await check();
+        if (result !== undefined) {
+            return result;
         }
 
-        throw new Error(
-            `Timed out waiting for ${emulator.name} to finish booting.`,
+        await this.sleep(STARTUP_POLL_INTERVAL_MS, signal);
+        return this.pollForAndroidStartup(
+            check,
+            deadline,
+            timeoutMessage,
+            signal,
         );
     }
 
@@ -730,25 +748,24 @@ export class EmulatorService {
         const adbOutput = await this.executeFile(adbCommand, ["devices"], {
             signal,
         });
-        const devices: RunningAndroidDevice[] = [];
+        const serials = adbOutput
+            .split("\n")
+            .map((line) => this.getAdbDeviceSerial(line))
+            .filter((serial): serial is string => serial !== undefined);
+        const devices = await Promise.all(
+            serials.map(async (serial) => {
+                const avdName = await this.getAndroidAvdName(
+                    adbCommand,
+                    serial,
+                    signal,
+                );
+                return avdName ? { avdName, serial } : undefined;
+            }),
+        );
 
-        for (const line of adbOutput.split("\n")) {
-            const serial = this.getAdbDeviceSerial(line);
-            if (!serial) {
-                continue;
-            }
-
-            const avdName = await this.getAndroidAvdName(
-                adbCommand,
-                serial,
-                signal,
-            );
-            if (avdName) {
-                devices.push({ avdName, serial });
-            }
-        }
-
-        return devices;
+        return devices.filter(
+            (device): device is RunningAndroidDevice => device !== undefined,
+        );
     }
 
     private getAdbDeviceSerial(line: string): string | undefined {
