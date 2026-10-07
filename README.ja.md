@@ -38,8 +38,8 @@ VS Codeのサイドバーから、iOS SimulatorとAndroid Emulatorを一覧表�
 ## 設定
 
 - **`mobileEmulatorManager.androidSdkPath`:** Android SDKへの任意のパスです。環境変数やOSごとの既定パスでSDKが見つからない場合に指定してください。
-- **`mobileEmulatorManager.xcodeDeveloperPath`:** XcodeのDeveloperディレクトリへの任意のパスです。例: `/Applications/Xcode.app/Contents/Developer`。空欄の場合は、`xcode-select --print-path` で選択されているXcodeを使用します。
-- **`mobileEmulatorManager.androidEmulatorArgs`:** Android Emulatorへの追加引数を指定できます。リストの各項目に1つの引数を指定し、拡張機能で選んだ起動オプションの後に適用されます。
+- **`mobileEmulatorManager.xcodeDeveloperPath`:** XcodeのDeveloperディレクトリへの任意のパスです。例: `/Applications/Xcode.app/Contents/Developer`。iOS Simulatorへのアプリインストールにも、この設定で選択したXcodeを使用します。空欄の場合は、`xcode-select --print-path` で選択されているXcodeを使用します。
+- **`mobileEmulatorManager.androidEmulatorArgs`:** Android Emulatorへの追加引数を指定できます。リストの各項目に1つの引数を指定します（例: `"-gpu"` と `"software"` は別々の項目）。コールドブートなどの起動オプションの後、選択した起動オプションやプロファイルの追加引数の前に適用されます。追加引数を明示的に指定した場合は保存済みの既定値を置き換え、省略した場合は既定値を使用します。
 
 ## 使い方
 

@@ -38,8 +38,8 @@ Manage and control your iOS Simulators and Android Emulators directly from the V
 ## Settings
 
 - **`mobileEmulatorManager.androidSdkPath`:** Optional path to your Android SDK. Use this when automatic detection through environment variables and platform defaults does not find your SDK.
-- **`mobileEmulatorManager.xcodeDeveloperPath`:** Optional path to Xcode's Developer directory, such as `/Applications/Xcode.app/Contents/Developer`. When empty, the extension uses the Xcode selected by `xcode-select --print-path`.
-- **`mobileEmulatorManager.androidEmulatorArgs`:** Optional additional Android Emulator arguments. Add one complete argument per list entry; they are applied after the launch options selected in the extension.
+- **`mobileEmulatorManager.xcodeDeveloperPath`:** Optional path to Xcode's Developer directory, such as `/Applications/Xcode.app/Contents/Developer`. This selection also applies when installing apps on iOS Simulators. When empty, the extension uses the Xcode selected by `xcode-select --print-path`.
+- **`mobileEmulatorManager.androidEmulatorArgs`:** Optional additional Android Emulator arguments. Add one argument per list entry (for example, `"-gpu"` and `"software"` as separate entries). These follow the structured launch options and precede the additional arguments from the selected launch options or profile. Explicit additional arguments replace saved defaults; when omitted, saved defaults are used.
 
 ## Usage
 

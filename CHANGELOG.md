@@ -2,6 +2,18 @@
 
 All notable changes to "Mobile Emulator Manager" will be documented in this file.
 
+## [0.5.1] - 2026-10-08
+
+### Fixed
+- Restored the Copy ADB Serial context-menu action for running Android emulators, including favorites
+- Prevented duplicate Android Emulator arguments when starting with saved launch options and ensured explicitly selected options replace saved additional arguments
+- Applied the selected Xcode Developer Path when installing apps on iOS Simulators
+
+### Changed
+- Look up running Android emulators' AVD names in parallel to reduce device-list loading time
+- Refactored Android startup polling and device icon selection for maintainability
+- Updated transitive dependencies `brace-expansion` from 2.1.4 to 2.1.7 and `markdown-it` from 14.3.0 to 14.3.2
+
 ## [0.5.0] - 2026-09-21
 
 ### Added
