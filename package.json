@@ -240,7 +240,7 @@
         },
         {
           "command": "emulators.copyAndroidSerial",
-          "when": "view == emulatorsView && viewItem == emulator-android-running"
+          "when": "view == emulatorsView && viewItem =~ /^emulator-android-(regular|favorite)-running$/"
         },
         {
           "command": "emulators.addFavorite",
